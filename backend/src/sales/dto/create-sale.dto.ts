@@ -10,8 +10,12 @@ export class CreateSaleDto {
   branchId: string;
 
   @IsUUID()
-  @IsNotEmpty()
-  clientId: string;
+  @IsOptional()
+  clientId?: string;
+
+  @IsString()
+  @IsOptional()
+  clientName?: string;
 
   @IsUUID()
   @IsNotEmpty()

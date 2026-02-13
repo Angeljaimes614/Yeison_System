@@ -10,8 +10,12 @@ export class CreatePurchaseDto {
   branchId: string;
 
   @IsUUID()
-  @IsNotEmpty()
-  providerId: string;
+  @IsOptional()
+  providerId?: string;
+
+  @IsString()
+  @IsOptional()
+  providerName?: string;
 
   @IsUUID()
   @IsNotEmpty()
