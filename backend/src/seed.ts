@@ -27,8 +27,7 @@ async function bootstrap() {
       console.log(`Creating branch: ${branchName}...`);
       await branchesService.create({ 
         name: branchName, 
-        address: 'Sede Principal', 
-        phone: '0000000000' 
+        address: 'Sede Principal'
       });
     }
   }
