@@ -1,5 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import * as crypto from 'crypto';
+
+// Polyfill para crypto en entornos donde no está disponible globalmente
+if (!global.crypto) {
+  // @ts-ignore
+  global.crypto = crypto;
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
