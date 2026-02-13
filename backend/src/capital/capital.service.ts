@@ -42,15 +42,17 @@ export class CapitalService {
 
   async getGlobalCapital() {
     // Assuming there is only one record or the first one is global
-    // We can also assume branchId is null for global, but for simplicity let's take the first one
-    // or create one if none exists.
     const capitals = await this.capitalRepository.find();
     if (capitals.length > 0) {
       return capitals[0];
     }
-    // If no capital exists, we might need to initialize it.
-    // For now return null and let the caller handle or create.
-    return null;
+    // If no capital exists, initialize it automatically
+    const newCapital = this.capitalRepository.create({
+      totalCapital: 0,
+      operativePlante: 0,
+      accumulatedProfit: 0,
+    });
+    return this.capitalRepository.save(newCapital);
   }
   
   // Helper to ensure capital exists for transactions

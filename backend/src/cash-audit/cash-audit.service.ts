@@ -20,10 +20,8 @@ export class CashAuditService {
     // 1. Get System Balance (Global Capital)
     // REFACTOR: Use global capital
     const capital = await this.capitalService.getGlobalCapital();
-    if (!capital) {
-      throw new NotFoundException(`Global Capital not found`);
-    }
-
+    
+    // capital is now guaranteed to exist by getGlobalCapital()
     const systemBalance = Number(capital.operativePlante);
     const difference = physicalBalance - systemBalance;
 
