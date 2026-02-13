@@ -45,10 +45,10 @@ export class PurchasesService {
            await queryRunner.manager.save(capital);
       }
 
-      // Requirement: No permitir compra si plante insuficiente
-      if (Number(capital.operativePlante) < paidAmount) {
-         throw new BadRequestException('Insufficient operative plante (cash) for this purchase payment');
-      }
+      // Requirement: Warn but ALLOW purchase even if operative plante is insufficient (Negative Balance Allowed)
+      // if (Number(capital.operativePlante) < paidAmount) {
+      //    throw new BadRequestException('Insufficient operative plante (cash) for this purchase payment');
+      // }
 
       // 2. Create Purchase Record
       const purchase = this.purchaseRepository.create({

@@ -39,10 +39,10 @@ export class SalesService {
       // Calculate total available
       const totalAvailable = inventoryLots.reduce((sum, lot) => Number(sum) + Number(lot.currentBalance), 0);
 
-      // Requirement: No permitir vender más inventario del disponible
-      if (totalAvailable < amount) {
-        throw new BadRequestException(`Insufficient inventory. Available: ${totalAvailable}, Requested: ${amount}`);
-      }
+      // Requirement: Allow selling even if inventory is theoretically insufficient (Negative Inventory Allowed for correction)
+      // if (totalAvailable < amount) {
+      //   throw new BadRequestException(`Insufficient inventory. Available: ${totalAvailable}, Requested: ${amount}`);
+      // }
 
       // 2. Consume Inventory & Calculate Profit
       let remainingAmountToSell = amount;
