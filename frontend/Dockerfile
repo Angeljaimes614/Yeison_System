@@ -17,7 +17,7 @@ RUN npm run build
 # Install 'serve' to run the static application
 RUN npm install -g serve
 
-# Expose port (Railway will override this with $PORT)
+# Expose port
 EXPOSE 3000
 
 # Start command
