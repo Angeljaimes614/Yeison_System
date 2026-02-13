@@ -33,15 +33,21 @@ async function bootstrap() {
     }
   }
 
-  // 3. Create Currencies (USD, EUR, VES)
+  // 3. Create Currencies (USDT, EURO, DÓLAR, ZELLE, BS, OTROS)
   const currencies = [
-    { code: 'USD', name: 'Dólar Americano', symbol: '$' },
-    { code: 'EUR', name: 'Euro', symbol: '€' },
-    { code: 'VES', name: 'Bolívar Venezolano', symbol: 'Bs.' },
+    { code: 'USDT', name: 'Tether (USDT)', symbol: '₮' },
+    { code: 'EURO', name: 'Euro', symbol: '€' },
+    { code: 'DÓLAR', name: 'Dólar Americano', symbol: '$' },
+    { code: 'ZELLE', name: 'Zelle (Digital)', symbol: 'Z' },
+    { code: 'BS', name: 'Bolívar Venezolano', symbol: 'Bs.' },
+    { code: 'OTROS', name: 'Otras Divisas', symbol: '?' },
   ];
 
   for (const curr of currencies) {
-    const existing = (await currenciesService.findAll()).find(c => c.code === curr.code);
+    // Check by code or name to avoid duplicates if code changed
+    const allCurrencies = await currenciesService.findAll();
+    const existing = allCurrencies.find(c => c.code === curr.code);
+    
     if (!existing) {
       console.log(`Creating currency: ${curr.code}...`);
       await currenciesService.create(curr);
