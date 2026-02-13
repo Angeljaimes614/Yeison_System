@@ -1,0 +1,71 @@
+================================================================================
+GUÍA DE DESPLIEGUE (CÓMO SUBIR TU ERP A INTERNET)
+================================================================================
+
+Para que tu sistema funcione en la web y puedas acceder desde cualquier lugar (Cúcuta, Bogotá, etc.),
+necesitas 3 cosas en la nube:
+
+1.  BASE DE DATOS (PostgreSQL)
+2.  BACKEND (Tu API NestJS)
+3.  FRONTEND (Tu página Web React)
+
+A continuación, te explico la forma MÁS FÁCIL y económica de hacerlo usando servicios modernos.
+
+OPCIÓN RECOMENDADA: RAILWAY (Backend + BD) + VERCEL (Frontend)
+--------------------------------------------------------------------------------
+
+PASO 1: SUBIR EL CÓDIGO A GITHUB
+--------------------------------------------------------------------------------
+1.  Crea una cuenta en GitHub.com.
+2.  Crea un nuevo repositorio (ej: "erp-cambios").
+3.  Sube tu carpeta `ERP_YEISON` a ese repositorio.
+
+PASO 2: BASE DE DATOS Y BACKEND (EN RAILWAY.APP)
+--------------------------------------------------------------------------------
+Railway es excelente porque te da la Base de Datos y el Backend en un solo lugar.
+
+1.  Entra a Railway.app y regístrate con tu GitHub.
+2.  Crea un "New Project" -> "Deploy from GitHub repo".
+3.  Selecciona tu repositorio "erp-cambios".
+4.  **Configuración del Backend:**
+    *   Railway detectará la carpeta. Asegúrate de decirle que el "Root Directory" es `/backend`.
+    *   En "Variables": Agrega las mismas de tu `.env` local (JWT_SECRET, etc.).
+5.  **Agregar Base de Datos:**
+    *   En el mismo proyecto de Railway, dale "New" -> "Database" -> "PostgreSQL".
+    *   Railway creará la BD automáticamente.
+    *   En las "Variables" de tu Backend, conecta la BD usando la variable `DATABASE_URL` que Railway te genera.
+
+¡Listo! Railway te dará una URL pública para tu backend (ej: `https://erp-backend-production.up.railway.app`).
+
+PASO 3: FRONTEND (EN VERCEL.COM)
+--------------------------------------------------------------------------------
+Vercel es el mejor lugar para subir React.
+
+1.  Entra a Vercel.com y entra con GitHub.
+2.  "Add New Project" -> Importa tu repositorio "erp-cambios".
+3.  **Configuración:**
+    *   Framework Preset: Vite
+    *   Root Directory: Selecciona `frontend` (dale Edit).
+4.  **Conectar con Backend:**
+    *   Ve a la carpeta `frontend/src/api/axios.ts` en tu código.
+    *   Cambia `baseURL: 'http://localhost:3000'` por la URL que te dio Railway (ej: `https://erp-backend-production.up.railway.app`).
+    *   (O mejor aún, usa variables de entorno en Vercel: `VITE_API_URL`).
+5.  Dale "Deploy".
+
+¡Listo! Vercel te dará una URL (ej: `https://erp-cambios.vercel.app`).
+Esa es la dirección que le darás a tus cajeros.
+
+================================================================================
+VENTAJAS DE ESTE MÉTODO
+================================================================================
+✅ No necesitas tener Docker ni nada instalado en tu PC local.
+✅ La base de datos está segura en la nube (backups automáticos).
+✅ Puedes acceder desde el celular o cualquier PC.
+✅ Railway y Vercel tienen planes gratuitos o muy baratos para empezar.
+
+================================================================================
+RESUMEN TÉCNICO
+================================================================================
+- Frontend: Vercel (Hosting estático React)
+- Backend: Railway (Contenedor Node.js)
+- Base de Datos: Railway (PostgreSQL Gestionado)

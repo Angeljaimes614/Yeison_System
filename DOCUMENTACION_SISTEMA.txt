@@ -1,0 +1,83 @@
+================================================================================
+DOCUMENTACIÓN OFICIAL - SISTEMA ERP FINANCIERO Y CAMBIARIO (MODELO CENTRALIZADO)
+================================================================================
+
+1. ARQUITECTURA FINANCIERA (REGLA DE ORO)
+--------------------------------------------------------------------------------
+Este sistema opera bajo un modelo de CENTRALIZACIÓN TOTAL. 
+Aunque existan múltiples sucursales operativas (usuarios en distintas sedes), 
+financieramente la empresa es UNA SOLA UNIDAD.
+
+⚠️ REGLA PRINCIPAL:
+“El sistema maneja un ÚNICO CAPITAL y un ÚNICO INVENTARIO GLOBAL centralizado 
+(físicamente en Cúcuta). Todas las operaciones de cualquier sede impactan 
+inmediatamente este fondo común.”
+
+2. ESTRUCTURA DE DATOS Y FLUJO
+--------------------------------------------------------------------------------
+
+A. CAPITAL GLOBAL (LA CAJA ÚNICA)
+   - Existe un solo registro de Capital para toda la empresa.
+   - Ubicación Física: Cúcuta.
+   - Todas las compras restan de este capital.
+   - Todas las ventas suman a este capital.
+   - Todos los gastos (de cualquier sede) restan de este capital.
+
+B. INVENTARIO GLOBAL (FIFO UNIFICADO)
+   - No existen inventarios por sucursal.
+   - Existe un solo inventario por divisa: "Dólares Empresa", "Euros Empresa".
+   - Método FIFO (First-In, First-Out) es GLOBAL.
+   - Ejemplo: Si se compraron dólares en Bogotá ayer y se venden hoy en Medellín, 
+     el sistema descuenta esos dólares del inventario global y calcula la utilidad real.
+
+C. SUCURSALES (SOLO INFORMATIVAS)
+   - Las sucursales NO tienen caja propia ni inventario propio en el sistema.
+   - Sirven exclusivamente para:
+     1. Trazabilidad: Saber quién y desde dónde hizo la operación.
+     2. Reportes: Filtrar rendimiento por punto de venta.
+     3. Control de Usuarios.
+
+3. OPERACIONES Y CÁLCULO DE UTILIDAD
+--------------------------------------------------------------------------------
+El sistema registra PRECIOS REALES en cada operación. No usa promedios.
+
+A. REGISTRO DE COMPRA (ENTRADA)
+   Se guarda obligatoriamente:
+   - Moneda y Cantidad.
+   - Tasa de Compra REAL (ej: 3.850).
+   - Total Pagado (sale de la Caja Global).
+   - Fecha, Hora, Sucursal y Usuario.
+   -> Esto crea un LOTE específico en el inventario global.
+
+B. REGISTRO DE VENTA (SALIDA)
+   Se guarda obligatoriamente:
+   - Moneda y Cantidad.
+   - Tasa de Venta REAL (ej: 3.910).
+   - Total Recibido (entra a la Caja Global).
+   
+   -> CÁLCULO DE UTILIDAD (Automático):
+      El sistema busca los lotes más antiguos disponibles (FIFO Global).
+      Utilidad = (Precio Venta - Precio Compra Original del Lote) * Cantidad.
+
+4. CONTROL Y AUDITORÍA
+--------------------------------------------------------------------------------
+
+A. ARQUEO DE CAJA (CÚCUTA)
+   - Como solo existe una Caja Global (Cúcuta), el arqueo físico solo tiene sentido allí.
+   - El sistema dice: "Debería haber $100.000.000" (Capital Global).
+   - El cajero cuenta y reporta.
+   - El sistema calcula la diferencia.
+
+B. DEUDAS Y ABONOS
+   - Cuentas por Cobrar y Pagar también impactan la Caja Global al momento de 
+     recibir o dar el dinero.
+
+5. TECNOLOGÍA
+--------------------------------------------------------------------------------
+- Backend: NestJS + TypeORM + PostgreSQL.
+- Frontend: React + Tailwind CSS.
+- Seguridad: JWT + Encriptación Bcrypt (Roles: Admin, Supervisor, Cajero).
+
+--------------------------------------------------------------------------------
+FIN DEL DOCUMENTO
+================================================================================
