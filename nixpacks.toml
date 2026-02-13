@@ -1,0 +1,13 @@
+providers = ["node"]
+
+[phases.setup]
+nixPkgs = ["nodejs-20_x"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build:all"]
+
+[start]
+cmd = "cd backend && npm run start:prod"
