@@ -1,0 +1,50 @@
+# SISTEMA ERP DE GESTIÓN PARA CASA DE CAMBIO
+## Resumen Ejecutivo del Proyecto
+
+### 1. ¿Qué es este sistema?
+Es una plataforma web integral diseñada específicamente para la administración y operación de Casas de Cambio. Permite controlar en tiempo real el flujo de dinero, el inventario de divisas y las operaciones diarias de compra y venta, eliminando el uso de planillas de Excel y cálculos manuales.
+
+---
+
+### 2. Alcance del Sistema (¿Qué hace?)
+
+#### A. Módulo de Operaciones (El "Core" del Negocio)
+*   **Compra y Venta de Divisas:** Interfaz rápida para registrar transacciones. Calcula automáticamente la conversión según la tasa del día.
+*   **Cálculo de Utilidad:** El sistema sabe exactamente a qué precio se compró cada billete (usando método FIFO/Promedio) para calcular la ganancia real de cada venta al instante.
+*   **Ticket/Recibo:** Generación automática de comprobantes de operación.
+
+#### B. Gestión de Inventario y Capital
+*   **Inventario de Divisas:** Control exacto de cuántos dólares, pesos, euros, etc., hay en cada sucursal y en caja fuerte.
+*   **Control de Capital (Plante):** Registro del dinero base con el que inicia la operación.
+*   **Movimientos entre Cajas:** Transferencias seguras de dinero entre la caja fuerte y las ventanillas (cajeros).
+
+#### C. Administración y Seguridad
+*   **Multi-Sucursal:** Soporte para manejar múltiples oficinas desde un solo sistema centralizado.
+*   **Roles y Permisos:**
+    *   *Administrador:* Acceso total y reportes financieros.
+    *   *Supervisor:* Control de operaciones y anulaciones.
+    *   *Cajero:* Solo puede operar y ver su propia caja.
+*   **Auditoría:** Registro de quién hizo qué y cuándo.
+
+#### D. Control Financiero
+*   **Cuadre de Caja (Cierre Diario):** Herramienta para que los cajeros reporten lo que tienen físico vs. lo que dice el sistema. Detecta sobrantes o faltantes automáticamente.
+*   **Gestión de Gastos:** Registro de salidas de dinero por conceptos operativos (alquiler, servicios, nómina) para afectar la utilidad neta real.
+*   **Cuentas por Cobrar/Pagar:** Módulo para manejar créditos o deudas pendientes con clientes/proveedores.
+
+---
+
+### 3. Problemas que Resuelve
+
+1.  **Elimina el "Robo Hormiga" y Descuadres:** Al obligar a registrar cada movimiento y cuadrar caja diariamente contra el sistema, se hace casi imposible que desaparezca dinero sin dejar rastro.
+2.  **Adiós a los Errores de Cálculo:** Los cajeros ya no usan calculadora manual. El sistema aplica la tasa exacta y evita errores humanos en las conversiones.
+3.  **Visibilidad en Tiempo Real:** El dueño puede ver desde su casa cuánto dinero y divisas tiene cada sucursal en ese preciso instante, sin esperar al reporte de la noche.
+4.  **Saber si Ganas o Pierdes:** Muchos cambistas no saben su utilidad real porque mezclan precios de compra viejos con nuevos. Este sistema calcula la ganancia exacta por operación.
+5.  **Centralización:** Toda la información está en una sola base de datos segura en la nube, accesible desde cualquier lugar con internet.
+
+---
+
+### 4. Tecnologías Utilizadas (Ficha Técnica)
+*   **Frontend (Lo que se ve):** React + Vite (Rápido y moderno), TailwindCSS (Diseño limpio y adaptable a móviles).
+*   **Backend (El cerebro):** NestJS (Framework robusto y escalable de Node.js).
+*   **Base de Datos:** PostgreSQL (Base de datos relacional segura y potente).
+*   **Infraestructura:** Dockerizado y listo para despliegue en la nube (Railway/AWS/DigitalOcean).
