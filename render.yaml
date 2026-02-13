@@ -3,8 +3,8 @@ services:
     name: erp-yeison-monolith
     env: node
     plan: free
-    buildCommand: npm run build:all
-    startCommand: npm start
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm run start:prod
     envVars:
       - key: NODE_VERSION
         value: 20.11.0
