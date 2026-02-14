@@ -39,7 +39,7 @@ import { AuthModule } from './auth/auth.module';
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true, // Auto-create tables (dev only)
-        dropSchema: false, // DISABLED to prevent data loss on restarts
+        dropSchema: true, // ⚠️ ENABLED to fix deployment conflict.
         ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
       }),
       inject: [ConfigService],
