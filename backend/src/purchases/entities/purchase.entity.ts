@@ -19,12 +19,15 @@ export class Purchase {
   @JoinColumn({ name: 'branchId' })
   branch: Branch;
 
-  @Column()
+  @Column({ nullable: true })
   providerId: string;
 
-  @ManyToOne(() => Provider)
+  @ManyToOne(() => Provider, { nullable: true })
   @JoinColumn({ name: 'providerId' })
   provider: Provider;
+
+  @Column({ nullable: true })
+  providerName: string;
 
   @Column()
   currencyId: string;
