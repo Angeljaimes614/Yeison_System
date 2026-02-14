@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: erp-yeison-monolith
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm run start:prod && node dist/seed.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: erp-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: erp-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: erp-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: erp-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: erp-db
+          property: password
+
+databases:
+  - name: erp-db
+    plan: free
+    databaseName: erp_yeison
+    user: yeison_admin

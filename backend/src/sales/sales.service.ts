@@ -20,7 +20,8 @@ export class SalesService {
   ) {}
 
   async create(createSaleDto: CreateSaleDto) {
-    const { branchId, currencyId, amount, rate, paidAmount } = createSaleDto;
+    let { branchId } = createSaleDto;
+    const { currencyId, amount, rate, paidAmount } = createSaleDto;
     const totalPesos = amount * rate;
 
     // Start Transaction
@@ -29,6 +30,14 @@ export class SalesService {
     await queryRunner.startTransaction();
 
     try {
+      // 0. Ensure Branch (Failsafe)
+      if (!branchId) {
+         const branches = await queryRunner.query(`SELECT id FROM branch LIMIT 1`);
+         if (branches && branches.length > 0) {
+            branchId = branches[0].id;
+         }
+      }
+
       // 1. Get Inventory Lots (FIFO GLOBAL)
       // REFACTOR: Use global inventory search (ignore branchId)
       const inventoryLots = await queryRunner.manager.find(Inventory, {
@@ -111,8 +120,7 @@ export class SalesService {
 
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      console.error('Sale Transaction Failed:', err);
-      throw new BadRequestException(`Error processing sale: ${err.message}`);
+      throw err;
     } finally {
       await queryRunner.release();
     }

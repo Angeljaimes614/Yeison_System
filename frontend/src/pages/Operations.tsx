@@ -5,9 +5,10 @@ import {
   providersService, 
   clientsService, 
   purchasesService, 
-  salesService 
+  salesService,
+  branchesService
 } from '../api/services';
-import { ArrowDownRight, ArrowUpRight, Calculator, Check, AlertCircle } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Calculator, Check, AlertCircle, Building2 } from 'lucide-react';
 
 const Operations = () => {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ const Operations = () => {
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [providers, setProviders] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   
   // Form State
   const [currencyId, setCurrencyId] = useState('');
@@ -25,6 +27,7 @@ const Operations = () => {
   const [rate, setRate] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
   const [paymentType, setPaymentType] = useState('cash');
+  const [selectedBranchId, setSelectedBranchId] = useState(user?.branchId || '');
   
   // UI State
   const [loading, setLoading] = useState(false);
@@ -37,16 +40,32 @@ const Operations = () => {
 
   const loadData = async () => {
     try {
-      const [currRes, provRes, cliRes] = await Promise.all([
+      setLoading(true);
+      const promises = [
         currenciesService.findAll(),
         providersService.findAll(),
         clientsService.findAll()
-      ]);
-      setCurrencies(currRes.data);
-      setProviders(provRes.data);
-      setClients(cliRes.data);
+      ];
+
+      // If user has no branch assigned, load branches to let them choose
+      if (!user?.branchId) {
+        promises.push(branchesService.findAll());
+      }
+
+      const results = await Promise.all(promises);
+      
+      setCurrencies(results[0]?.data || []);
+      setProviders(results[1]?.data || []);
+      setClients(results[2]?.data || []);
+      
+      if (!user?.branchId && results[3]) {
+        setBranches(results[3]?.data || []);
+      }
     } catch (err) {
       console.error('Error loading form data', err);
+      setError('Error cargando datos iniciales. Verifica tu conexión.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -59,10 +78,17 @@ const Operations = () => {
     setError('');
     setSuccess('');
 
+    // Validation for Branch
+    if (!selectedBranchId) {
+      setError('Debes seleccionar una sucursal para operar.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const commonData = {
         date: new Date().toISOString(),
-        branchId: user?.branchId,
+        branchId: selectedBranchId,
         currencyId,
         amount: Number(amount),
         rate: Number(rate),
@@ -74,13 +100,15 @@ const Operations = () => {
       if (activeTab === 'purchase') {
         await purchasesService.create({
           ...commonData,
-          providerId: entityId,
+          providerName: entityId, // Using entityId state for name input
+          providerId: undefined, // Optional now
         });
         setSuccess('Compra registrada exitosamente');
       } else {
         await salesService.create({
           ...commonData,
-          clientId: entityId,
+          clientName: entityId, // Using entityId state for name input
+          clientId: undefined, // Optional now
         });
         setSuccess('Venta registrada exitosamente');
       }
@@ -88,7 +116,7 @@ const Operations = () => {
       // Reset form
       setAmount('');
       setPaidAmount('');
-      // Keep rate/currency/entity as they might be reused
+      // Keep rate/currency/entity/branch as they might be reused
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Error al procesar la operación');
@@ -100,6 +128,29 @@ const Operations = () => {
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Operaciones de Cambio</h1>
+
+      {/* Branch Selection for Multi-Branch Users */}
+      {!user?.branchId && (
+        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-orange-200">
+          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+            <Building2 className="h-4 w-4 mr-2 text-orange-500" />
+            Selecciona la Sucursal de Operación
+          </label>
+          <select
+            className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2"
+            value={selectedBranchId}
+            onChange={(e) => setSelectedBranchId(e.target.value)}
+          >
+            <option value="">-- Seleccione una Sucursal --</option>
+            {Array.isArray(branches) && branches.map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+          {!selectedBranchId && (
+             <p className="text-xs text-orange-600 mt-1">* Requerido para operar.</p>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex space-x-4 mb-6">
@@ -152,7 +203,7 @@ const Operations = () => {
             <div className="col-span-1 md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">Moneda</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {currencies.map((curr) => (
+                {Array.isArray(currencies) && currencies.map((curr) => (
                   <button
                     key={curr.id}
                     type="button"
@@ -172,20 +223,16 @@ const Operations = () => {
             {/* Entity Selection (Provider/Client) */}
             <div className="col-span-1 md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {activeTab === 'purchase' ? 'Proveedor' : 'Cliente'}
+                Nombre del {activeTab === 'purchase' ? 'Proveedor' : 'Cliente'}
               </label>
-              <select
+              <input
+                type="text"
                 required
-                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3 bg-gray-50"
+                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3"
+                placeholder={`Nombre del ${activeTab === 'purchase' ? 'proveedor' : 'cliente'} (Opcional)`}
                 value={entityId}
                 onChange={(e) => setEntityId(e.target.value)}
-              >
-                <option value="">Seleccione...</option>
-                {activeTab === 'purchase' 
-                  ? providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
-                  : clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
-                }
-              </select>
+              />
             </div>
 
             {/* Amount & Rate */}

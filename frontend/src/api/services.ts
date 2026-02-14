@@ -1,8 +1,22 @@
 import api from './axios';
 
+export const usersService = {
+  findAll: () => api.get('/users'),
+  create: (data: any) => api.post('/users', data),
+  update: (id: string, data: any) => api.patch(`/users/${id}`, data),
+  remove: (id: string) => api.delete(`/users/${id}`),
+};
+
+export const branchesService = {
+  findAll: () => api.get('/branches'),
+  create: (data: any) => api.post('/branches', data),
+  update: (id: string, data: any) => api.patch(`/branches/${id}`, data),
+};
+
 export const capitalService = {
   findAll: () => api.get('/capital'),
   findOne: (id: string) => api.get(`/capital/${id}`),
+  update: (id: string, data: any) => api.patch(`/capital/${id}`, data),
 };
 
 export const inventoryService = {

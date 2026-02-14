@@ -10,7 +10,8 @@ import {
   FileText, 
   LogOut, 
   Menu,
-  X
+  X,
+  Users
 } from 'lucide-react';
 
 const Layout = () => {
@@ -31,6 +32,8 @@ const Layout = () => {
     { name: 'Caja y Capital', path: '/capital', icon: Wallet },
     { name: 'Gastos', path: '/expenses', icon: DollarSign },
     { name: 'Reportes', path: '/reports', icon: FileText },
+    // Only show Users menu to admins
+    ...(user?.role === 'admin' ? [{ name: 'Usuarios', path: '/users', icon: Users }] : []),
   ];
 
   return (
