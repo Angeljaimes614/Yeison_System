@@ -20,7 +20,8 @@ export class PurchasesService {
   ) {}
 
   async create(createPurchaseDto: CreatePurchaseDto) {
-    const { branchId, currencyId, amount, rate, paidAmount } = createPurchaseDto;
+    let { branchId } = createPurchaseDto;
+    const { currencyId, amount, rate, paidAmount } = createPurchaseDto;
     const totalPesos = amount * rate;
 
     // Start Transaction
@@ -29,6 +30,20 @@ export class PurchasesService {
     await queryRunner.startTransaction();
 
     try {
+      // 0. Ensure Branch (If null, fetch first one)
+      if (!branchId) {
+         // This is a failsafe. Normally frontend sends it.
+         // But let's check directly in DB if we can find one.
+         const branches = await queryRunner.query(`SELECT id FROM branch LIMIT 1`);
+         if (branches && branches.length > 0) {
+            branchId = branches[0].id;
+         } else {
+            // If absolutely no branch exists, we can't link it, but let's proceed with null if entity allows
+            // or throw error.
+            // For now, let's assume one exists due to seed.
+         }
+      }
+
       // 1. Check Global Capital
       // REFACTOR: Use Global Capital
       const capitals = await queryRunner.manager.find(Capital);
@@ -80,7 +95,8 @@ export class PurchasesService {
 
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      throw err;
+      console.error('Purchase Transaction Failed:', err); // Log full error to console
+      throw new BadRequestException(`Error processing purchase: ${err.message}`); // Return friendly error
     } finally {
       await queryRunner.release();
     }

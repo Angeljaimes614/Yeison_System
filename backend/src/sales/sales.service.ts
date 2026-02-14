@@ -111,7 +111,8 @@ export class SalesService {
 
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      throw err;
+      console.error('Sale Transaction Failed:', err);
+      throw new BadRequestException(`Error processing sale: ${err.message}`);
     } finally {
       await queryRunner.release();
     }
