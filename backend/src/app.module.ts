@@ -39,7 +39,7 @@ import { AuthModule } from './auth/auth.module';
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true, // Auto-create tables (dev only)
-        dropSchema: true, // ⚠️ DANGER: Drops all tables on startup. Remove after first run.
+        dropSchema: false, // DISABLED to prevent data loss on restarts
         ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
       }),
       inject: [ConfigService],

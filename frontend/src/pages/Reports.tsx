@@ -20,11 +20,11 @@ const Reports = () => {
       ]);
 
       const purchases = purchasesRes.data
-        .filter((p: any) => p.branchId === user?.branchId)
+        .filter((p: any) => !user?.branchId || p.branchId === user?.branchId) // Show all if admin (no branchId)
         .map((p: any) => ({ ...p, type: 'COMPRA' }));
       
       const sales = salesRes.data
-        .filter((s: any) => s.branchId === user?.branchId)
+        .filter((s: any) => !user?.branchId || s.branchId === user?.branchId) // Show all if admin (no branchId)
         .map((s: any) => ({ ...s, type: 'VENTA' }));
 
       const all = [...purchases, ...sales].sort((a, b) => 
