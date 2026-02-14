@@ -35,9 +35,10 @@ export class ExpensesService {
       }
 
       // Requirement: Debe descontarse del capital automáticamente.
-      if (Number(capital.operativePlante) < amount) {
-        throw new BadRequestException('Insufficient operative plante (cash) for this expense');
-      }
+      // REMOVED BLOCKING CHECK: Allow negative balance if physical cash exists but system doesn't know.
+      // if (Number(capital.operativePlante) < amount) {
+      //   throw new BadRequestException('Insufficient operative plante (cash) for this expense');
+      // }
 
       // 2. Create Expense
       const expense = this.expenseRepository.create(createExpenseDto);

@@ -74,7 +74,9 @@ const Reports = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {tx.type === 'COMPRA' ? tx.provider?.name : tx.client?.name}
+                  {tx.type === 'COMPRA' 
+                    ? (tx.provider?.name || tx.providerName || 'Proveedor General') 
+                    : (tx.client?.name || tx.clientName || 'Cliente General')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {tx.currency?.code}

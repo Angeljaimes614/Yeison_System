@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { capitalService, inventoryService } from '../api/services';
-import { DollarSign, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { DollarSign, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, Coins } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -13,7 +13,6 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         // Fetch Capital
-        // Note: In a real app, we should filter by the user's branch
         const capitalRes = await capitalService.findAll();
         // Assuming the first one matches or filtering client-side for now if multiple
         const userCapital = capitalRes.data.find((c: any) => c.branchId === user?.branchId) || capitalRes.data[0];
@@ -51,6 +50,16 @@ const Dashboard = () => {
     return acc;
   }, {});
 
+  // Define display list
+  const displayCurrencies = [
+    { code: 'COP', label: 'Total en COP', value: Number(capital?.operativePlante || 0), icon: Wallet, color: 'text-green-600', bg: 'bg-green-50' },
+    { code: 'DÓLAR', label: 'Total en DOLAR', value: inventoryByCurrency['DÓLAR'] || 0, icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { code: 'USDT', label: 'Total en USDT', value: inventoryByCurrency['USDT'] || 0, icon: Coins, color: 'text-teal-600', bg: 'bg-teal-50' },
+    { code: 'EURO', label: 'Total en EURO', value: inventoryByCurrency['EURO'] || 0, icon: Coins, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { code: 'BS', label: 'Total en BS', value: inventoryByCurrency['BS'] || 0, icon: Coins, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+    { code: 'ZELLE', label: 'Total en ZELLE', value: inventoryByCurrency['ZELLE'] || 0, icon: Coins, color: 'text-purple-600', bg: 'bg-purple-50' },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -62,90 +71,24 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Cards Principales */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Plante Operativo (Caja) */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Plante Operativo (Caja)</p>
-              <h3 className="text-3xl font-bold text-gray-800 mt-2">
-                $ {Number(capital?.operativePlante || 0).toLocaleString('es-CO')}
-              </h3>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <Wallet className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-             <span className="text-gray-400">Disponible para compras</span>
-          </div>
-        </div>
-
-        {/* Utilidad Acumulada */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Utilidad Acumulada</p>
-              <h3 className="text-3xl font-bold text-gray-800 mt-2">
-                $ {Number(capital?.accumulatedProfit || 0).toLocaleString('es-CO')}
-              </h3>
-            </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-green-600 flex items-center font-medium">
-              <ArrowUpRight className="h-4 w-4 mr-1" />
-              +0.0%
-            </span>
-            <span className="text-gray-400 ml-2">vs ayer</span>
-          </div>
-        </div>
-
-        {/* Capital Total */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Capital Total</p>
-              <h3 className="text-3xl font-bold text-gray-800 mt-2">
-                $ {Number(capital?.totalCapital || 0).toLocaleString('es-CO')}
-              </h3>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <DollarSign className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-           <div className="mt-4 flex items-center text-sm">
-             <span className="text-gray-400">Patrimonio neto</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Inventario de Divisas */}
-      <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4">Inventario de Divisas</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Object.entries(inventoryByCurrency).map(([currency, amount]) => (
-          <div key={currency} className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 font-medium">{currency}</p>
-              <p className="text-xl font-bold text-gray-800">{Number(amount).toLocaleString('es-CO')}</p>
-            </div>
-            <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-white ${
-              currency === 'USD' ? 'bg-green-600' :
-              currency === 'EUR' ? 'bg-blue-600' :
-              currency === 'USDT' ? 'bg-teal-500' : 'bg-gray-500'
-            }`}>
-              {currency.substring(0, 1)}
+      {/* Resumen General de Balances por Moneda */}
+      <h2 className="text-xl font-bold text-gray-800 mt-4 mb-4">Resumen de Balances</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {displayCurrencies.map((curr) => (
+          <div key={curr.code} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">{curr.label}</p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-2 font-mono">
+                  {curr.code === 'COP' ? '$ ' : ''}{curr.value.toLocaleString('es-CO')} {curr.code !== 'COP' ? curr.code : ''}
+                </h3>
+              </div>
+              <div className={`p-3 rounded-lg ${curr.bg}`}>
+                <curr.icon className={`h-6 w-6 ${curr.color}`} />
+              </div>
             </div>
           </div>
         ))}
-        {Object.keys(inventoryByCurrency).length === 0 && (
-           <div className="col-span-full bg-gray-50 p-4 rounded text-center text-gray-500">
-             No hay inventario registrado.
-           </div>
-        )}
       </div>
 
       {/* Accesos Rápidos */}
