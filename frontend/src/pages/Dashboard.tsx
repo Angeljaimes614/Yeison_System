@@ -14,8 +14,8 @@ const Dashboard = () => {
       try {
         // Fetch Capital
         const capitalRes = await capitalService.findAll();
-        // Assuming the first one matches or filtering client-side for now if multiple
-        const userCapital = capitalRes.data.find((c: any) => c.branchId === user?.branchId) || capitalRes.data[0];
+        // Global Capital: Always use the first one as capital is shared across branches
+        const userCapital = capitalRes.data[0] || null;
         setCapital(userCapital);
 
         // Fetch Inventory
