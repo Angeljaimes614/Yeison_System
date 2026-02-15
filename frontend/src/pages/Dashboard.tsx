@@ -16,7 +16,9 @@ const Dashboard = () => {
       // Fetch Capital
       const capitalRes = await capitalService.findAll();
       // Global Capital: Always use the first one as capital is shared across branches
-      const userCapital = capitalRes.data[0] || null;
+      // Ensure we treat it as an array and take the first one
+      const capitalList = Array.isArray(capitalRes.data) ? capitalRes.data : [capitalRes.data];
+      const userCapital = capitalList[0] || null;
       setCapital(userCapital);
 
       // Fetch Inventory
