@@ -131,8 +131,13 @@ export class SalesService {
       }
 
       // Requirement: "Sumar ventas al plante"
-      capital.operativePlante = Number(capital.operativePlante) + Number(paidAmount);
-      capital.accumulatedProfit = Number(capital.accumulatedProfit) + Number(profit);
+      // FIX: Ensure types are treated as numbers
+      const currentPlante = Number(capital.operativePlante);
+      const paymentAmount = Number(paidAmount);
+      const profitAmount = Number(profit);
+
+      capital.operativePlante = currentPlante + paymentAmount;
+      capital.accumulatedProfit = Number(capital.accumulatedProfit) + profitAmount;
       
       await queryRunner.manager.save(capital);
 

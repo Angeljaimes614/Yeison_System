@@ -75,7 +75,11 @@ export class PurchasesService {
       const savedPurchase = await queryRunner.manager.save(purchase);
 
       // 3. Update Capital (Deduct paid amount from operative plante)
-      capital.operativePlante = Number(capital.operativePlante) - Number(paidAmount);
+      const currentPlante = Number(capital.operativePlante);
+      const paymentAmount = Number(paidAmount);
+      
+      capital.operativePlante = currentPlante - paymentAmount;
+      
       await queryRunner.manager.save(capital);
 
       // 4. Create Inventory Lote (FIFO)
