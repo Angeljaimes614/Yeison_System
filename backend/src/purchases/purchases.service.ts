@@ -78,9 +78,16 @@ export class PurchasesService {
       const currentPlante = Number(capital.operativePlante);
       const paymentAmount = Number(paidAmount);
       
+      console.log('--- DEBUG PURCHASE CAPITAL UPDATE ---');
+      console.log('Current Plante:', currentPlante);
+      console.log('Deducting Paid Amount:', paymentAmount);
+      console.log('New Plante should be:', currentPlante - paymentAmount);
+
       capital.operativePlante = currentPlante - paymentAmount;
       
-      await queryRunner.manager.save(capital);
+      const savedCapital = await queryRunner.manager.save(capital);
+      console.log('Saved Capital Plante:', savedCapital.operativePlante);
+      console.log('-------------------------------');
 
       // 4. Create Inventory Lote (FIFO)
       // Note: branchId is saved for traceability but inventory is global

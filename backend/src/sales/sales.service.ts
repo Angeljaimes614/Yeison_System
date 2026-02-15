@@ -135,11 +135,18 @@ export class SalesService {
       const currentPlante = Number(capital.operativePlante);
       const paymentAmount = Number(paidAmount);
       const profitAmount = Number(profit);
+      
+      console.log('--- DEBUG SALE CAPITAL UPDATE ---');
+      console.log('Current Plante:', currentPlante);
+      console.log('Adding Paid Amount:', paymentAmount);
+      console.log('New Plante should be:', currentPlante + paymentAmount);
 
       capital.operativePlante = currentPlante + paymentAmount;
       capital.accumulatedProfit = Number(capital.accumulatedProfit) + profitAmount;
       
-      await queryRunner.manager.save(capital);
+      const savedCapital = await queryRunner.manager.save(capital);
+      console.log('Saved Capital Plante:', savedCapital.operativePlante);
+      console.log('-------------------------------');
 
       await queryRunner.commitTransaction();
       return savedSale;
