@@ -76,6 +76,17 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Debug Info (Temporary) */}
+      <div className="bg-gray-100 p-4 rounded text-xs font-mono mb-4 overflow-auto max-h-60 border border-red-300">
+        <h3 className="font-bold text-red-600 mb-2">DEBUG INFO (Si ves esto, envíame una foto)</h3>
+        <p><strong>Role:</strong> {user?.role}</p>
+        <p><strong>Branch ID:</strong> {user?.branchId || 'Ninguna (Global)'}</p>
+        <p><strong>Inventory Count:</strong> {inventory.length}</p>
+        <p><strong>Capital:</strong> {JSON.stringify(capital)}</p>
+        <p><strong>Inventory Items (First 5):</strong></p>
+        <pre>{JSON.stringify(inventory.slice(0, 5), null, 2)}</pre>
+      </div>
+
       {/* Resumen General de Balances por Moneda */}
       <h2 className="text-xl font-bold text-gray-800 mt-4 mb-4">Resumen de Balances</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
