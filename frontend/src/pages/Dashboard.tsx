@@ -20,8 +20,13 @@ const Dashboard = () => {
 
         // Fetch Inventory
         const inventoryRes = await inventoryService.findAll();
-        // Filter by branch
-        const userInventory = inventoryRes.data.filter((i: any) => i.branchId === user?.branchId);
+        
+        // If admin, show all inventory (Global View). Otherwise, filter by branch.
+        let userInventory = inventoryRes.data;
+        if (user?.role !== 'admin') {
+           userInventory = inventoryRes.data.filter((i: any) => i.branchId === user?.branchId);
+        }
+        
         setInventory(userInventory);
 
       } catch (error) {
