@@ -75,7 +75,12 @@ export class PurchasesService {
       const savedPurchase = await queryRunner.manager.save(purchase);
 
       // 3. Update Capital (Deduct paid amount from operative plante)
-      const currentPlante = Number(capital.operativePlante);
+      // Re-fetch capital inside transaction to ensure freshness
+      const freshCapital = await queryRunner.manager.findOne(Capital, { where: { id: capital.id } });
+      
+      if (!freshCapital) throw new NotFoundException('Capital not found during transaction');
+
+      const currentPlante = Number(freshCapital.operativePlante);
       const paymentAmount = Number(paidAmount);
       
       console.log('--- DEBUG PURCHASE CAPITAL UPDATE ---');
@@ -83,9 +88,9 @@ export class PurchasesService {
       console.log('Deducting Paid Amount:', paymentAmount);
       console.log('New Plante should be:', currentPlante - paymentAmount);
 
-      capital.operativePlante = currentPlante - paymentAmount;
+      freshCapital.operativePlante = currentPlante - paymentAmount;
       
-      const savedCapital = await queryRunner.manager.save(capital);
+      const savedCapital = await queryRunner.manager.save(freshCapital);
       console.log('Saved Capital Plante:', savedCapital.operativePlante);
       console.log('-------------------------------');
 

@@ -132,7 +132,12 @@ export class SalesService {
 
       // Requirement: "Sumar ventas al plante"
       // FIX: Ensure types are treated as numbers
-      const currentPlante = Number(capital.operativePlante);
+      // Re-fetch capital to ensure freshness and correct types (avoid cached object issues in transaction)
+      const freshCapital = await queryRunner.manager.findOne(Capital, { where: { id: capital.id } });
+      
+      if (!freshCapital) throw new NotFoundException('Capital not found during transaction');
+
+      const currentPlante = Number(freshCapital.operativePlante);
       const paymentAmount = Number(paidAmount);
       const profitAmount = Number(profit);
       
@@ -141,10 +146,10 @@ export class SalesService {
       console.log('Adding Paid Amount:', paymentAmount);
       console.log('New Plante should be:', currentPlante + paymentAmount);
 
-      capital.operativePlante = currentPlante + paymentAmount;
-      capital.accumulatedProfit = Number(capital.accumulatedProfit) + profitAmount;
+      freshCapital.operativePlante = currentPlante + paymentAmount;
+      freshCapital.accumulatedProfit = Number(freshCapital.accumulatedProfit) + profitAmount;
       
-      const savedCapital = await queryRunner.manager.save(capital);
+      const savedCapital = await queryRunner.manager.save(freshCapital);
       console.log('Saved Capital Plante:', savedCapital.operativePlante);
       console.log('-------------------------------');
 
