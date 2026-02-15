@@ -47,11 +47,18 @@ const Dashboard = () => {
 
   // Calculate totals by currency
   const inventoryByCurrency = inventory.reduce((acc: any, item: any) => {
-    const currency = item.currency?.code || 'Unknown';
-    if (!acc[currency]) {
-      acc[currency] = 0;
+    // Check if currency object exists, otherwise use currencyId as fallback if needed, but display requires code
+    const currency = item.currency?.code; 
+    
+    // Only process if we have a valid currency code
+    if (currency) {
+        if (!acc[currency]) {
+          acc[currency] = 0;
+        }
+        // IMPORTANT: Sum everything, even if status is 'depleted' if currentBalance > 0
+        // (Though depleted should be 0, safety check)
+        acc[currency] += Number(item.currentBalance);
     }
-    acc[currency] += Number(item.currentBalance);
     return acc;
   }, {});
 
@@ -77,7 +84,7 @@ const Dashboard = () => {
       </div>
 
       {/* Debug Info (Temporary) */}
-      <div className="bg-gray-100 p-4 rounded text-xs font-mono mb-4 overflow-auto max-h-60 border border-red-300">
+      <div className="bg-gray-100 p-4 rounded text-xs font-mono mb-4 overflow-auto max-h-60 border border-red-300 hidden">
         <h3 className="font-bold text-red-600 mb-2">DEBUG INFO (Si ves esto, envíame una foto)</h3>
         <p><strong>Role:</strong> {user?.role}</p>
         <p><strong>Branch ID:</strong> {user?.branchId || 'Ninguna (Global)'}</p>
