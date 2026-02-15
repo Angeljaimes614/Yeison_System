@@ -8,40 +8,48 @@ const Dashboard = () => {
   const [capital, setCapital] = useState<any>(null);
   const [inventory, setInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Fetch Capital
+      const capitalRes = await capitalService.findAll();
+      // Global Capital: Always use the first one as capital is shared across branches
+      const userCapital = capitalRes.data[0] || null;
+      setCapital(userCapital);
+
+      // Fetch Inventory
+      const inventoryRes = await inventoryService.findAll();
+      
+      // If admin, show all inventory (Global View). Otherwise, filter by branch.
+      let userInventory = inventoryRes.data;
+      if (user?.role !== 'admin') {
+         userInventory = inventoryRes.data.filter((i: any) => i.branchId === user?.branchId);
+      }
+      
+      setInventory(userInventory);
+      setLastUpdated(new Date());
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch Capital
-        const capitalRes = await capitalService.findAll();
-        // Global Capital: Always use the first one as capital is shared across branches
-        const userCapital = capitalRes.data[0] || null;
-        setCapital(userCapital);
-
-        // Fetch Inventory
-        const inventoryRes = await inventoryService.findAll();
-        
-        // If admin, show all inventory (Global View). Otherwise, filter by branch.
-        let userInventory = inventoryRes.data;
-        if (user?.role !== 'admin') {
-           userInventory = inventoryRes.data.filter((i: any) => i.branchId === user?.branchId);
-        }
-        
-        setInventory(userInventory);
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (user) {
       fetchData();
     }
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+        if (user) fetchData();
+    }, 30000);
+    return () => clearInterval(interval);
   }, [user]);
 
-  if (loading) {
+  if (loading && !capital) {
     return <div className="p-8 text-center">Cargando dashboard...</div>;
   }
 
@@ -75,12 +83,22 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Dashboard - {user?.role === 'admin' ? 'Vista General' : 'Mi Sucursal'}
-        </h1>
-        <div className="text-sm text-gray-500">
-          {new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        <div>
+           <h1 className="text-2xl font-bold text-gray-800">
+             Dashboard - {user?.role === 'admin' ? 'Vista General' : 'Mi Sucursal'}
+           </h1>
+           <div className="text-sm text-gray-500 mt-1">
+             Actualizado: {lastUpdated.toLocaleTimeString()}
+           </div>
         </div>
+        
+        <button 
+           onClick={() => fetchData()}
+           className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center transition-colors"
+           disabled={loading}
+        >
+           {loading ? 'Actualizando...' : '↻ Actualizar Datos'}
+        </button>
       </div>
 
       {/* Debug Info (Temporary) */}
@@ -103,7 +121,9 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">{curr.label}</p>
                 <h3 className="text-3xl font-bold text-gray-800 mt-2 font-mono">
-                  {curr.code === 'COP' ? '$ ' : ''}{curr.value.toLocaleString('es-CO')} {curr.code !== 'COP' ? curr.code : ''}
+                  {curr.code === 'COP' ? '$ ' : ''}
+                  {curr.value.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} 
+                  {curr.code !== 'COP' ? ` ${curr.code}` : ''}
                 </h3>
               </div>
               <div className={`p-3 rounded-lg ${curr.bg}`}>
