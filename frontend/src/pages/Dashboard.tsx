@@ -13,13 +13,20 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Fetch Capital
+      // 1. Force Fetch from Server (bypass potential local cache)
       const capitalRes = await capitalService.findAll();
+      
+      // 2. Log Raw Data
+      console.log('Raw Capital Response:', capitalRes.data);
+
       // Global Capital: Always use the first one as capital is shared across branches
       // Ensure we treat it as an array and take the first one
       const capitalList = Array.isArray(capitalRes.data) ? capitalRes.data : [capitalRes.data];
       const userCapital = capitalList[0] || null;
-      setCapital(userCapital);
+      
+      // 3. Force State Update with new object reference
+      setCapital({...userCapital}); 
+      console.log('Set Capital State:', userCapital);
 
       // Fetch Inventory
       const inventoryRes = await inventoryService.findAll();
