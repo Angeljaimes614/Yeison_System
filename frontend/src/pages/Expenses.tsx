@@ -45,9 +45,10 @@ const Expenses = () => {
       setConcept('');
       setAmount('');
       loadExpenses(); // Reload
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating expense', error);
-      alert('Error al registrar gasto. Verifique saldo.');
+      const msg = error.response?.data?.message || 'Error al registrar gasto. Verifique conexión.';
+      alert(`Error: ${msg}`);
     }
   };
 
