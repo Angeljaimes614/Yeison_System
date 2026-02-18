@@ -6,11 +6,21 @@ import { FileText } from 'lucide-react';
 const Reports = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filters
+  const [filterDate, setFilterDate] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
 
   useEffect(() => {
     loadTransactions();
   }, [user]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [transactions, filterDate, filterMonth, filterYear]);
 
   const loadTransactions = async () => {
     try {
@@ -20,11 +30,11 @@ const Reports = () => {
       ]);
 
       const purchases = purchasesRes.data
-        .filter((p: any) => !user?.branchId || p.branchId === user?.branchId) // Show all if admin (no branchId)
+        .filter((p: any) => !user?.branchId || p.branchId === user?.branchId) 
         .map((p: any) => ({ ...p, type: 'COMPRA' }));
       
       const sales = salesRes.data
-        .filter((s: any) => !user?.branchId || s.branchId === user?.branchId) // Show all if admin (no branchId)
+        .filter((s: any) => !user?.branchId || s.branchId === user?.branchId) 
         .map((s: any) => ({ ...s, type: 'VENTA' }));
 
       const all = [...purchases, ...sales].sort((a, b) => 
@@ -32,6 +42,7 @@ const Reports = () => {
       );
 
       setTransactions(all);
+      setFilteredTransactions(all);
     } catch (error) {
       console.error(error);
     } finally {
@@ -39,11 +50,115 @@ const Reports = () => {
     }
   };
 
+  const applyFilters = () => {
+    let result = [...transactions];
+
+    if (filterDate) {
+      result = result.filter(tx => new Date(tx.date).toISOString().split('T')[0] === filterDate);
+    }
+
+    if (filterMonth) {
+      result = result.filter(tx => {
+        const d = new Date(tx.date);
+        // month is 0-indexed, so add 1. filterMonth is "2024-02" format usually if type="month"
+        // but let's assume simple select for now or text
+        return (d.getMonth() + 1).toString() === filterMonth;
+      });
+    }
+    
+    // Better Month/Year logic
+    if (filterMonth && filterYear) {
+       // specific month of year
+       result = result.filter(tx => {
+         const d = new Date(tx.date);
+         return (d.getMonth() + 1) === Number(filterMonth) && d.getFullYear() === Number(filterYear);
+       });
+    } else if (filterMonth && !filterYear) {
+       // month of current year? or any year? usually current year if not specified
+       const currentYear = new Date().getFullYear();
+       result = result.filter(tx => {
+         const d = new Date(tx.date);
+         return (d.getMonth() + 1) === Number(filterMonth) && d.getFullYear() === currentYear;
+       });
+    } else if (!filterMonth && filterYear) {
+       result = result.filter(tx => new Date(tx.date).getFullYear() === Number(filterYear));
+    }
+
+    setFilteredTransactions(result);
+  };
+
+  const clearFilters = () => {
+    setFilterDate('');
+    setFilterMonth('');
+    setFilterYear('');
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center mb-6">
-        <FileText className="h-8 w-8 text-blue-600 mr-3" />
-        <h1 className="text-2xl font-bold text-gray-800">Reporte de Transacciones</h1>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+        <div className="flex items-center mb-4 md:mb-0">
+          <FileText className="h-8 w-8 text-blue-600 mr-3" />
+          <h1 className="text-2xl font-bold text-gray-800">Reporte de Transacciones</h1>
+        </div>
+        
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 items-end">
+           <div>
+             <label className="block text-xs font-medium text-gray-500">Día Específico</label>
+             <input 
+               type="date" 
+               className="border rounded p-2 text-sm"
+               value={filterDate}
+               onChange={(e) => { setFilterDate(e.target.value); setFilterMonth(''); setFilterYear(''); }}
+             />
+           </div>
+           
+           <div className="flex items-center text-gray-400 font-bold px-1">O</div>
+
+           <div>
+             <label className="block text-xs font-medium text-gray-500">Mes</label>
+             <select 
+               className="border rounded p-2 text-sm w-32"
+               value={filterMonth}
+               onChange={(e) => { setFilterMonth(e.target.value); setFilterDate(''); }}
+             >
+               <option value="">Todos</option>
+               <option value="1">Enero</option>
+               <option value="2">Febrero</option>
+               <option value="3">Marzo</option>
+               <option value="4">Abril</option>
+               <option value="5">Mayo</option>
+               <option value="6">Junio</option>
+               <option value="7">Julio</option>
+               <option value="8">Agosto</option>
+               <option value="9">Septiembre</option>
+               <option value="10">Octubre</option>
+               <option value="11">Noviembre</option>
+               <option value="12">Diciembre</option>
+             </select>
+           </div>
+
+           <div>
+             <label className="block text-xs font-medium text-gray-500">Año</label>
+             <select 
+               className="border rounded p-2 text-sm w-24"
+               value={filterYear}
+               onChange={(e) => { setFilterYear(e.target.value); setFilterDate(''); }}
+             >
+               <option value="">Todos</option>
+               <option value="2024">2024</option>
+               <option value="2025">2025</option>
+               <option value="2026">2026</option>
+             </select>
+           </div>
+
+           <button 
+             onClick={clearFilters}
+             className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-sm h-10"
+           >
+             Limpiar
+           </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -61,7 +176,7 @@ const Reports = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {transactions.map((tx) => (
+            {filteredTransactions.map((tx) => (
               <tr key={tx.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(tx.date).toLocaleDateString()} {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
