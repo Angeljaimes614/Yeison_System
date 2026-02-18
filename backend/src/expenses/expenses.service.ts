@@ -26,47 +26,32 @@ export class ExpensesService {
 
     try {
       // 1. Check Global Capital
-      // Re-fetch capital inside transaction to ensure freshness
-      // We need to find the capital ID first, or just find the first one
-      const capitals = await queryRunner.manager.find(Capital);
-      let capital = capitals.length > 0 ? capitals[0] : null;
+      // REFACTOR: Simplified capital retrieval logic
+      let capital = await queryRunner.manager.findOne(Capital, { where: {} }); // Find ANY capital
 
       if (!capital) {
-         // Should not happen if initialized, but handle gracefully
-         // Try to init
+         // Create default capital if none exists
           capital = queryRunner.manager.create(Capital, {
               totalCapital: 0,
               operativePlante: 0,
               accumulatedProfit: 0
            });
            await queryRunner.manager.save(capital);
-      } else {
-         // Reload it to be safe within transaction context
-         const freshCapital = await queryRunner.manager.findOne(Capital, { where: { id: capital.id } });
-         if (freshCapital) capital = freshCapital;
       }
 
-      // Requirement: Debe descontarse del capital automáticamente.
-      // REMOVED BLOCKING CHECK: Allow negative balance if physical cash exists but system doesn't know.
-      // if (Number(capital.operativePlante) < amount) {
-      //   throw new BadRequestException('Insufficient operative plante (cash) for this expense');
-      // }
-
       // 2. Create Expense
-      // FIX: Use queryRunner.manager to create and save, not this.expenseRepository
-      // This ensures it is part of the transaction
-      // Ensure date is set if missing
-      const expenseData = {
-          branchId: createExpenseDto.branchId,
-          concept: createExpenseDto.concept,
-          amount: Number(createExpenseDto.amount),
-          type: createExpenseDto.type,
-          date: createExpenseDto.date ? new Date(createExpenseDto.date) : new Date(),
-          createdById: createExpenseDto.createdById || undefined // Use undefined for TypeORM optional
-      };
-      
-      const expense = queryRunner.manager.create(Expense, expenseData);
-      const savedExpense = await queryRunner.manager.save(expense);
+      // Simplified creation logic
+      const expense = new Expense();
+      expense.branchId = createExpenseDto.branchId;
+      expense.concept = createExpenseDto.concept;
+      expense.amount = Number(createExpenseDto.amount);
+      expense.type = createExpenseDto.type;
+      expense.date = createExpenseDto.date ? new Date(createExpenseDto.date) : new Date();
+      if (createExpenseDto.createdById) {
+        expense.createdById = createExpenseDto.createdById;
+      }
+
+      const savedExpense = await queryRunner.manager.save(Expense, expense);
 
       // 3. Deduct from Capital
       const currentPlante = Number(capital.operativePlante);
@@ -78,7 +63,7 @@ export class ExpensesService {
       console.log('New Plante should be:', currentPlante - expenseAmount);
 
       capital.operativePlante = currentPlante - expenseAmount;
-      await queryRunner.manager.save(capital);
+      await queryRunner.manager.save(Capital, capital);
 
       await queryRunner.commitTransaction();
       return savedExpense;
