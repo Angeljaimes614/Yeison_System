@@ -57,10 +57,12 @@ export class ExpensesService {
       // This ensures it is part of the transaction
       // Ensure date is set if missing
       const expenseData = {
-          ...createExpenseDto,
+          branchId: createExpenseDto.branchId,
+          concept: createExpenseDto.concept,
+          amount: Number(createExpenseDto.amount),
+          type: createExpenseDto.type,
           date: createExpenseDto.date ? new Date(createExpenseDto.date) : new Date(),
-          // Ensure amount is number
-          amount: Number(createExpenseDto.amount)
+          createdById: createExpenseDto.createdById || undefined // Use undefined for TypeORM optional
       };
       
       const expense = queryRunner.manager.create(Expense, expenseData);
