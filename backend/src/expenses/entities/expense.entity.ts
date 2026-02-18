@@ -10,7 +10,7 @@ export class Expense {
   @Column()
   date: Date;
 
-  @Column()
+  @Column({ nullable: true })
   branchId: string;
 
   @ManyToOne(() => Branch)
