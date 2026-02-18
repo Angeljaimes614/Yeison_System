@@ -35,7 +35,7 @@ const Expenses = () => {
     try {
       await expensesService.create({
         date: new Date().toISOString(),
-        branchId: user?.branchId,
+        branchId: user?.branchId || user?.id, // Fallback if admin has no branch
         concept,
         amount: Number(amount),
         type,
