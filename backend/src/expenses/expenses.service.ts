@@ -26,12 +26,24 @@ export class ExpensesService {
 
     try {
       // 1. Check Global Capital
+      // Re-fetch capital inside transaction to ensure freshness
+      // We need to find the capital ID first, or just find the first one
       const capitals = await queryRunner.manager.find(Capital);
       let capital = capitals.length > 0 ? capitals[0] : null;
 
       if (!capital) {
          // Should not happen if initialized, but handle gracefully
-         throw new NotFoundException(`Global Capital not found`);
+         // Try to init
+          capital = queryRunner.manager.create(Capital, {
+              totalCapital: 0,
+              operativePlante: 0,
+              accumulatedProfit: 0
+           });
+           await queryRunner.manager.save(capital);
+      } else {
+         // Reload it to be safe within transaction context
+         const freshCapital = await queryRunner.manager.findOne(Capital, { where: { id: capital.id } });
+         if (freshCapital) capital = freshCapital;
       }
 
       // Requirement: Debe descontarse del capital automáticamente.
@@ -45,7 +57,15 @@ export class ExpensesService {
       const savedExpense = await queryRunner.manager.save(expense);
 
       // 3. Deduct from Capital
-      capital.operativePlante = Number(capital.operativePlante) - Number(amount);
+      const currentPlante = Number(capital.operativePlante);
+      const expenseAmount = Number(amount);
+      
+      console.log('--- DEBUG EXPENSE CAPITAL UPDATE ---');
+      console.log('Current Plante:', currentPlante);
+      console.log('Deducting Expense:', expenseAmount);
+      console.log('New Plante should be:', currentPlante - expenseAmount);
+
+      capital.operativePlante = currentPlante - expenseAmount;
       await queryRunner.manager.save(capital);
 
       await queryRunner.commitTransaction();
