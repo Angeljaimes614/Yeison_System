@@ -53,7 +53,9 @@ export class ExpensesService {
       // }
 
       // 2. Create Expense
-      const expense = this.expenseRepository.create(createExpenseDto);
+      // FIX: Use queryRunner.manager to create and save, not this.expenseRepository
+      // This ensures it is part of the transaction
+      const expense = queryRunner.manager.create(Expense, createExpenseDto);
       const savedExpense = await queryRunner.manager.save(expense);
 
       // 3. Deduct from Capital
@@ -72,6 +74,7 @@ export class ExpensesService {
       return savedExpense;
 
     } catch (err) {
+      console.error('ERROR CREATING EXPENSE:', err);
       await queryRunner.rollbackTransaction();
       throw err;
     } finally {
