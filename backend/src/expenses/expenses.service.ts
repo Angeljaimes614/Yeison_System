@@ -55,7 +55,15 @@ export class ExpensesService {
       // 2. Create Expense
       // FIX: Use queryRunner.manager to create and save, not this.expenseRepository
       // This ensures it is part of the transaction
-      const expense = queryRunner.manager.create(Expense, createExpenseDto);
+      // Ensure date is set if missing
+      const expenseData = {
+          ...createExpenseDto,
+          date: createExpenseDto.date ? new Date(createExpenseDto.date) : new Date(),
+          // Ensure amount is number
+          amount: Number(createExpenseDto.amount)
+      };
+      
+      const expense = queryRunner.manager.create(Expense, expenseData);
       const savedExpense = await queryRunner.manager.save(expense);
 
       // 3. Deduct from Capital
