@@ -25,6 +25,12 @@ export const capitalService = {
 
 export const inventoryService = {
   findAll: () => api.get('/inventory'),
+  findGlobal: () => api.get('/inventory/global'),
+};
+
+export const exchangesService = {
+  findAll: () => api.get('/exchanges'),
+  create: (data: any) => api.post('/exchanges', data),
 };
 
 export const salesService = {
