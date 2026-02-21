@@ -3,9 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InventoryService } from './inventory.service';
 import { InventoryController } from './inventory.controller';
 import { Inventory } from './entities/inventory.entity';
+import { GlobalInventory } from './entities/global-inventory.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Inventory])],
+  imports: [TypeOrmModule.forFeature([Inventory, GlobalInventory])],
   controllers: [InventoryController],
   providers: [InventoryService],
   exports: [InventoryService],

@@ -8,6 +8,7 @@ import { CapitalService } from '../capital/capital.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { Inventory } from '../inventory/entities/inventory.entity';
 import { Capital } from '../capital/entities/capital.entity';
+import { GlobalInventory } from '../inventory/entities/global-inventory.entity';
 
 @Injectable()
 export class PurchasesService {
@@ -22,7 +23,7 @@ export class PurchasesService {
   async create(createPurchaseDto: CreatePurchaseDto) {
     let { branchId } = createPurchaseDto;
     const { currencyId, amount, rate, paidAmount } = createPurchaseDto;
-    const totalPesos = amount * rate;
+    const totalPesos = Number(amount) * Number(rate);
 
     // Start Transaction
     const queryRunner = this.dataSource.createQueryRunner();
@@ -33,25 +34,17 @@ export class PurchasesService {
       // 0. Ensure Branch (If null, fetch first one)
       if (!branchId) {
          // This is a failsafe. Normally frontend sends it.
-         // But let's check directly in DB if we can find one.
          const branches = await queryRunner.query(`SELECT id FROM branch LIMIT 1`);
          if (branches && branches.length > 0) {
             branchId = branches[0].id;
-         } else {
-            // If absolutely no branch exists, we can't link it, but let's proceed with null if entity allows
-            // or throw error.
-            // For now, let's assume one exists due to seed.
          }
       }
 
       // 1. Check Global Capital
-      // REFACTOR: Use Global Capital
       const capitals = await queryRunner.manager.find(Capital);
       let capital = capitals.length > 0 ? capitals[0] : null;
 
       if (!capital) {
-          // If no capital, we can't buy unless we init it. 
-          // For safety, require it to exist or init with 0.
           capital = queryRunner.manager.create(Capital, {
               totalCapital: 0,
               operativePlante: 0,
@@ -59,11 +52,6 @@ export class PurchasesService {
            });
            await queryRunner.manager.save(capital);
       }
-
-      // Requirement: Warn but ALLOW purchase even if operative plante is insufficient (Negative Balance Allowed)
-      // if (Number(capital.operativePlante) < paidAmount) {
-      //    throw new BadRequestException('Insufficient operative plante (cash) for this purchase payment');
-      // }
 
       // 2. Create Purchase Record
       const purchase = this.purchaseRepository.create({
@@ -75,27 +63,44 @@ export class PurchasesService {
       const savedPurchase = await queryRunner.manager.save(purchase);
 
       // 3. Update Capital (Deduct paid amount from operative plante)
-      // Re-fetch capital inside transaction to ensure freshness
       const freshCapital = await queryRunner.manager.findOne(Capital, { where: { id: capital.id } });
-      
       if (!freshCapital) throw new NotFoundException('Capital not found during transaction');
 
       const currentPlante = Number(freshCapital.operativePlante);
       const paymentAmount = Number(paidAmount);
       
-      console.log('--- DEBUG PURCHASE CAPITAL UPDATE ---');
-      console.log('Current Plante:', currentPlante);
-      console.log('Deducting Paid Amount:', paymentAmount);
-      console.log('New Plante should be:', currentPlante - paymentAmount);
-
       freshCapital.operativePlante = currentPlante - paymentAmount;
-      
-      const savedCapital = await queryRunner.manager.save(freshCapital);
-      console.log('Saved Capital Plante:', savedCapital.operativePlante);
-      console.log('-------------------------------');
+      await queryRunner.manager.save(freshCapital);
 
-      // 4. Create Inventory Lote (FIFO)
-      // Note: branchId is saved for traceability but inventory is global
+      // 4. Update Global Inventory (Weighted Average Cost)
+      // Fetch or Create Global Inventory for this Currency
+      let globalInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId } });
+      
+      if (!globalInv) {
+          globalInv = queryRunner.manager.create(GlobalInventory, {
+            currencyId,
+            totalQuantity: 0,
+            totalCostCOP: 0,
+            averageCost: 0
+          });
+      }
+
+      const oldQty = Number(globalInv.totalQuantity);
+      const oldCost = Number(globalInv.totalCostCOP);
+      
+      const newQty = oldQty + Number(amount);
+      const newCost = oldCost + Number(totalPesos);
+      
+      // Calculate Weighted Average Cost
+      const newAvg = newQty > 0 ? newCost / newQty : 0;
+
+      globalInv.totalQuantity = newQty;
+      globalInv.totalCostCOP = newCost;
+      globalInv.averageCost = newAvg;
+
+      await queryRunner.manager.save(globalInv);
+
+      // 5. Keep Legacy Inventory (FIFO Lote) for traceability but rely on GlobalInventory for calculations
       const inventoryLote = queryRunner.manager.create(Inventory, {
         branchId,
         currencyId,
@@ -111,8 +116,8 @@ export class PurchasesService {
 
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      console.error('Purchase Transaction Failed:', err); // Log full error to console
-      throw new BadRequestException(`Error processing purchase: ${err.message}`); // Return friendly error
+      console.error('Purchase Transaction Failed:', err);
+      throw new BadRequestException(`Error processing purchase: ${err.message}`);
     } finally {
       await queryRunner.release();
     }
