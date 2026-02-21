@@ -30,11 +30,13 @@ export const inventoryService = {
 export const salesService = {
   findAll: () => api.get('/sales'),
   create: (data: any) => api.post('/sales', data),
+  reverse: (id: string, data: { userId: string, reason: string }) => api.post(`/sales/${id}/reverse`, data),
 };
 
 export const purchasesService = {
   findAll: () => api.get('/purchases'),
   create: (data: any) => api.post('/purchases', data),
+  reverse: (id: string, data: { userId: string, reason: string }) => api.post(`/purchases/${id}/reverse`, data),
 };
 
 export const currenciesService = {

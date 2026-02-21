@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { purchasesService, salesService } from '../api/services';
-import { FileText } from 'lucide-react';
+import { FileText, RotateCcw } from 'lucide-react';
 
 const Reports = () => {
   const { user } = useAuth();
@@ -60,21 +60,16 @@ const Reports = () => {
     if (filterMonth) {
       result = result.filter(tx => {
         const d = new Date(tx.date);
-        // month is 0-indexed, so add 1. filterMonth is "2024-02" format usually if type="month"
-        // but let's assume simple select for now or text
         return (d.getMonth() + 1).toString() === filterMonth;
       });
     }
     
-    // Better Month/Year logic
     if (filterMonth && filterYear) {
-       // specific month of year
        result = result.filter(tx => {
          const d = new Date(tx.date);
          return (d.getMonth() + 1) === Number(filterMonth) && d.getFullYear() === Number(filterYear);
        });
     } else if (filterMonth && !filterYear) {
-       // month of current year? or any year? usually current year if not specified
        const currentYear = new Date().getFullYear();
        result = result.filter(tx => {
          const d = new Date(tx.date);
@@ -91,6 +86,24 @@ const Reports = () => {
     setFilterDate('');
     setFilterMonth('');
     setFilterYear('');
+  };
+
+  const handleReverse = async (tx: any) => {
+    const reason = prompt(`¿Está seguro de anular esta ${tx.type}? Ingrese el motivo:`);
+    if (!reason) return;
+
+    try {
+      if (tx.type === 'COMPRA') {
+        await purchasesService.reverse(tx.id, { userId: user?.id || '', reason });
+      } else {
+        await salesService.reverse(tx.id, { userId: user?.id || '', reason });
+      }
+      alert('Operación anulada correctamente.');
+      loadTransactions();
+    } catch (error: any) {
+      console.error(error);
+      alert('Error al anular: ' + (error.response?.data?.message || 'Error desconocido'));
+    }
   };
 
   return (
@@ -173,19 +186,21 @@ const Reports = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tasa</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Pesos</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredTransactions.map((tx) => (
-              <tr key={tx.id}>
+              <tr key={tx.id} className={tx.status === 'reversed' ? 'bg-gray-50 opacity-60' : ''}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(tx.date).toLocaleDateString()} {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    tx.status === 'reversed' ? 'bg-gray-200 text-gray-600 line-through' :
                     tx.type === 'COMPRA' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                   }`}>
-                    {tx.type}
+                    {tx.type} {tx.status === 'reversed' ? '(ANULADA)' : ''}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -206,7 +221,9 @@ const Reports = () => {
                   $ {Number(tx.totalPesos).toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                   {tx.pendingBalance > 0 ? (
+                   {tx.status === 'reversed' ? (
+                      <span className="text-gray-500 text-xs font-bold">ANULADO</span>
+                   ) : tx.pendingBalance > 0 ? (
                      <span className="text-red-600 text-xs font-bold">
                        Debe: $ {Number(tx.pendingBalance).toLocaleString('es-CO')}
                      </span>
@@ -214,11 +231,23 @@ const Reports = () => {
                      <span className="text-green-600 text-xs font-bold">Pagado</span>
                    )}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  {tx.status !== 'reversed' && (
+                    <button
+                      onClick={() => handleReverse(tx)}
+                      className="text-red-600 hover:text-red-900 flex items-center text-xs border border-red-200 px-2 py-1 rounded hover:bg-red-50"
+                      title="Anular Operación (Reverso)"
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Anular
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
             {transactions.length === 0 && !loading && (
               <tr>
-                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                   No hay movimientos registrados.
                 </td>
               </tr>
