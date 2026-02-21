@@ -33,7 +33,7 @@ function App() {
             } />
             {/* <Route path="inventory" element={<Inventory />} /> */}
             <Route path="capital" element={<Capital />} />
-            <Route path="expenses" element={<Expenses />} />
+            {/* <Route path="expenses" element={<Expenses />} /> */}
             <Route path="reports" element={<Reports />} />
             <Route path="users" element={<Users />} />
           </Route>
