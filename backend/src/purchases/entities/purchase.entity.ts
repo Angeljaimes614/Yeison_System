@@ -54,8 +54,17 @@ export class Purchase {
   @Column('decimal', { precision: 16, scale: 2 })
   pendingBalance: number; // totalPesos - paidAmount
 
-  @Column({ default: 'completed' }) // completed, pending (if pendingBalance > 0)
+  @Column({ default: 'completed' }) // completed, pending, reversed
   status: string;
+
+  @Column({ nullable: true })
+  reversedAt: Date;
+
+  @Column({ nullable: true })
+  reversedById: string;
+
+  @Column({ nullable: true })
+  reversalReason: string;
 
   @Column({ nullable: true })
   createdById: string;

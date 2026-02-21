@@ -46,7 +46,10 @@ export class Sale {
   totalPesos: number; // amount * rate
 
   @Column('decimal', { precision: 16, scale: 2, default: 0 })
-  profit: number; // Utilidad calculada (rate - averagePurchaseRate) * amount
+  profit: number;
+
+  @Column('decimal', { precision: 16, scale: 2, default: 0 })
+  costBasis: number; // The cost of goods sold (COGS) at the moment of sale
 
   @Column({ default: 'cash' }) // cash, transfer, credit
   paymentType: string;
@@ -57,8 +60,17 @@ export class Sale {
   @Column('decimal', { precision: 16, scale: 2 })
   pendingBalance: number; // totalPesos - paidAmount
 
-  @Column({ default: 'completed' }) // completed, pending
+  @Column({ default: 'completed' }) // completed, pending, reversed
   status: string;
+
+  @Column({ nullable: true })
+  reversedAt: Date;
+
+  @Column({ nullable: true })
+  reversedById: string;
+
+  @Column({ nullable: true })
+  reversalReason: string;
 
   @Column({ nullable: true })
   createdById: string;

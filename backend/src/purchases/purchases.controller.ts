@@ -7,6 +7,11 @@ import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 export class PurchasesController {
   constructor(private readonly purchasesService: PurchasesService) {}
 
+  @Post(':id/reverse')
+  reverse(@Param('id') id: string, @Body() body: { userId: string; reason: string }) {
+    return this.purchasesService.reverse(id, body.userId, body.reason);
+  }
+
   @Post()
   create(@Body() createPurchaseDto: CreatePurchaseDto) {
     return this.purchasesService.create(createPurchaseDto);

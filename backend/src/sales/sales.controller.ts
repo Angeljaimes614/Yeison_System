@@ -7,6 +7,11 @@ import { UpdateSaleDto } from './dto/update-sale.dto';
 export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
+  @Post(':id/reverse')
+  reverse(@Param('id') id: string, @Body() body: { userId: string; reason: string }) {
+    return this.salesService.reverse(id, body.userId, body.reason);
+  }
+
   @Post()
   create(@Body() createSaleDto: CreateSaleDto) {
     return this.salesService.create(createSaleDto);

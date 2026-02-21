@@ -20,6 +20,70 @@ export class PurchasesService {
     private readonly dataSource: DataSource,
   ) {}
 
+  async reverse(id: string, userId: string, reason: string) {
+    const purchase = await this.findOne(id);
+    if (purchase.status === 'reversed') {
+      throw new BadRequestException('Purchase is already reversed');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Revert Inventory (Deduct what was bought)
+      // We use the weighted average logic in reverse: we deduct quantity and cost.
+      // Important: We must deduct the ORIGINAL COST we added, not the current average.
+      // Purchase entity stores: amount (qty) and totalPesos (cost).
+      
+      const globalInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId: purchase.currencyId } });
+      
+      if (!globalInv) throw new NotFoundException('Inventory not found for reversal');
+
+      const qtyToReverse = Number(purchase.amount);
+      const costToReverse = Number(purchase.totalPesos);
+
+      globalInv.totalQuantity = Number(globalInv.totalQuantity) - qtyToReverse;
+      globalInv.totalCostCOP = Number(globalInv.totalCostCOP) - costToReverse;
+      
+      // Recalculate Average (Avoid div by zero)
+      if (globalInv.totalQuantity > 0) {
+          globalInv.averageCost = globalInv.totalCostCOP / globalInv.totalQuantity;
+      } else {
+          globalInv.totalQuantity = 0;
+          globalInv.totalCostCOP = 0;
+          globalInv.averageCost = 0;
+      }
+
+      await queryRunner.manager.save(globalInv);
+
+      // 2. Revert Capital (Refund Cash)
+      const capitals = await queryRunner.manager.find(Capital);
+      const capital = capitals[0];
+      if (capital) {
+          capital.operativePlante = Number(capital.operativePlante) + Number(purchase.paidAmount);
+          await queryRunner.manager.save(capital);
+      }
+
+      // 3. Mark as Reversed
+      purchase.status = 'reversed';
+      purchase.reversedAt = new Date();
+      purchase.reversedById = userId;
+      purchase.reversalReason = reason;
+
+      const updatedPurchase = await queryRunner.manager.save(purchase);
+
+      await queryRunner.commitTransaction();
+      return updatedPurchase;
+
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   async create(createPurchaseDto: CreatePurchaseDto) {
     let { branchId } = createPurchaseDto;
     const { currencyId, amount, rate, paidAmount } = createPurchaseDto;

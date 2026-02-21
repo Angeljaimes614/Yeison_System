@@ -20,6 +20,78 @@ export class SalesService {
     private readonly dataSource: DataSource,
   ) {}
 
+  async reverse(id: string, userId: string, reason: string) {
+    const sale = await this.findOne(id);
+    if (sale.status === 'reversed') {
+      throw new BadRequestException('Sale is already reversed');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Revert Inventory (Add back what was sold)
+      // We add back the quantity and the ORIGINAL COST of the sale to maintain WAC integrity.
+      // If we didn't save costBasis, we have to estimate or use current average (risky).
+      // Ideally we should have saved 'costBasis'. If not, we use (totalPesos - profit).
+      
+      const globalInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId: sale.currencyId } });
+      
+      if (!globalInv) {
+         // Should exist if we sold it, but if deleted, recreate?
+         // Reversal requires inventory to exist to put it back.
+         throw new NotFoundException('Inventory record not found for reversal');
+      }
+
+      const qtyToReverse = Number(sale.amount);
+      
+      // Calculate original cost basis
+      // Profit = Revenue - Cost => Cost = Revenue - Profit
+      const originalCostOfSale = Number(sale.totalPesos) - Number(sale.profit);
+
+      globalInv.totalQuantity = Number(globalInv.totalQuantity) + qtyToReverse;
+      globalInv.totalCostCOP = Number(globalInv.totalCostCOP) + originalCostOfSale;
+      
+      // Recalculate Average
+      if (globalInv.totalQuantity > 0) {
+          globalInv.averageCost = globalInv.totalCostCOP / globalInv.totalQuantity;
+      }
+
+      await queryRunner.manager.save(globalInv);
+
+      // 2. Revert Capital (Deduct Cash & Profit)
+      const capitals = await queryRunner.manager.find(Capital);
+      const capital = capitals[0];
+      
+      if (capital) {
+          // Remove the cash we got
+          capital.operativePlante = Number(capital.operativePlante) - Number(sale.paidAmount);
+          // Remove the profit we booked
+          capital.accumulatedProfit = Number(capital.accumulatedProfit) - Number(sale.profit);
+          
+          await queryRunner.manager.save(capital);
+      }
+
+      // 3. Mark as Reversed
+      sale.status = 'reversed';
+      sale.reversedAt = new Date();
+      sale.reversedById = userId;
+      sale.reversalReason = reason;
+
+      const updatedSale = await queryRunner.manager.save(sale);
+
+      await queryRunner.commitTransaction();
+      return updatedSale;
+
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   async create(createSaleDto: CreateSaleDto) {
     let { branchId } = createSaleDto;
     const { currencyId, amount, rate, paidAmount } = createSaleDto;
