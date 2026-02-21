@@ -7,6 +7,16 @@ import { UpdateCapitalDto } from './dto/update-capital.dto';
 export class CapitalController {
   constructor(private readonly capitalService: CapitalService) {}
 
+  @Post('movements')
+  registerMovement(@Body() body: { type: 'INJECTION' | 'WITHDRAWAL_PROFIT' | 'WITHDRAWAL_CAPITAL'; amount: number; description: string; userId: string }) {
+    return this.capitalService.registerMovement(body.type, body.amount, body.description, body.userId);
+  }
+
+  @Get('movements')
+  getMovements() {
+    return this.capitalService.getMovements();
+  }
+
   @Post()
   create(@Body() createCapitalDto: CreateCapitalDto) {
     return this.capitalService.create(createCapitalDto);
