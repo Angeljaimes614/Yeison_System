@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { purchasesService, salesService } from '../api/services';
-import { FileText, RotateCcw } from 'lucide-react';
+import { purchasesService, salesService, paymentsService } from '../api/services';
+import { FileText, RotateCcw, Wallet } from 'lucide-react';
 
 const Reports = () => {
   const { user } = useAuth();
@@ -104,6 +104,33 @@ const Reports = () => {
       console.error(error);
       alert('Error al anular: ' + (error.response?.data?.message || 'Error desconocido'));
     }
+  };
+
+  const handlePayment = async (tx: any) => {
+      const amountStr = prompt(`Saldo pendiente: $${Number(tx.pendingBalance).toLocaleString()}\nIngrese monto a abonar:`);
+      if (!amountStr) return;
+      
+      const amount = Number(amountStr);
+      if (isNaN(amount) || amount <= 0) {
+          alert('Monto inválido');
+          return;
+      }
+
+      try {
+          await paymentsService.create({
+              date: new Date().toISOString(),
+              amount,
+              method: 'cash',
+              purchaseId: tx.type === 'COMPRA' ? tx.id : undefined,
+              saleId: tx.type === 'VENTA' ? tx.id : undefined,
+              createdById: user?.id
+          });
+          alert('Abono registrado correctamente');
+          loadTransactions();
+      } catch (error: any) {
+          console.error(error);
+          alert('Error al registrar abono: ' + (error.response?.data?.message || 'Error desconocido'));
+      }
   };
 
   return (
@@ -233,14 +260,26 @@ const Reports = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   {tx.status !== 'reversed' && (
-                    <button
-                      onClick={() => handleReverse(tx)}
-                      className="text-red-600 hover:text-red-900 flex items-center text-xs border border-red-200 px-2 py-1 rounded hover:bg-red-50"
-                      title="Anular Operación (Reverso)"
-                    >
-                      <RotateCcw className="h-3 w-3 mr-1" />
-                      Anular
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      {tx.pendingBalance > 0 && (
+                        <button
+                          onClick={() => handlePayment(tx)}
+                          className="text-green-600 hover:text-green-900 flex items-center text-xs border border-green-200 px-2 py-1 rounded hover:bg-green-50"
+                          title="Registrar Abono"
+                        >
+                          <Wallet className="h-3 w-3 mr-1" />
+                          Abonar
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleReverse(tx)}
+                        className="text-red-600 hover:text-red-900 flex items-center text-xs border border-red-200 px-2 py-1 rounded hover:bg-red-50"
+                        title="Anular Operación (Reverso)"
+                      >
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Anular
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>

@@ -64,6 +64,11 @@ export const expensesService = {
   create: (data: any) => api.post('/expenses', data),
 };
 
+export const paymentsService = {
+  create: (data: any) => api.post('/payments', data),
+  findAll: () => api.get('/payments'),
+};
+
 export const cashAuditService = {
   findAll: () => api.get('/cash-audit'),
   create: (data: any) => api.post('/cash-audit', data),
