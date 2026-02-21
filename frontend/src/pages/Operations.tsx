@@ -27,6 +27,7 @@ const Operations = () => {
   const [rate, setRate] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
   const [paymentType, setPaymentType] = useState('cash');
+  const [operationType, setOperationType] = useState<'INVENTORY' | 'DIRECT'>('INVENTORY');
   const [selectedBranchId, setSelectedBranchId] = useState(user?.branchId || '');
   
   // UI State
@@ -94,21 +95,23 @@ const Operations = () => {
         rate: Number(rate),
         paidAmount: Number(paidAmount),
         paymentType,
+        operationType: activeTab === 'sale' ? operationType : 'INVENTORY', // Only sales support DIRECT for now in this flow? Or both? Usually sales.
         createdById: user?.id,
       };
 
       if (activeTab === 'purchase') {
         await purchasesService.create({
           ...commonData,
-          providerName: entityId, // Using entityId state for name input
-          providerId: undefined, // Optional now
+          operationType: operationType, // Explicitly set it
+          providerName: entityId,
+          providerId: undefined,
         });
         setSuccess('Compra registrada exitosamente');
       } else {
         await salesService.create({
           ...commonData,
-          clientName: entityId, // Using entityId state for name input
-          clientId: undefined, // Optional now
+          clientName: entityId,
+          clientId: undefined,
         });
         setSuccess('Venta registrada exitosamente');
       }
@@ -151,6 +154,34 @@ const Operations = () => {
           )}
         </div>
       )}
+
+      {/* Operation Type Selector */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-gray-100 p-1 rounded-lg inline-flex">
+          <button
+            type="button"
+            onClick={() => setOperationType('INVENTORY')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              operationType === 'INVENTORY'
+                ? 'bg-white text-gray-800 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Afectar Inventario (Normal)
+          </button>
+          <button
+            type="button"
+            onClick={() => setOperationType('DIRECT')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              operationType === 'DIRECT'
+                ? 'bg-white text-gray-800 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Operación Directa (Sin Inventario)
+          </button>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="flex space-x-4 mb-6">
