@@ -6,6 +6,7 @@ import { UserRole } from './users/entities/user.entity';
 import { BranchesService } from './branches/branches.service';
 import { CurrenciesService } from './currencies/currencies.service';
 import { CapitalService } from './capital/capital.service';
+import { DataSource } from 'typeorm';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,6 +14,30 @@ async function bootstrap() {
   
   console.log('--- INICIANDO SERVIDOR ERP YEISON ---');
   console.log('Versión del código: ' + new Date().toISOString());
+
+  // === LIMPIEZA DE PRODUCCIÓN (ONE-TIME RUN) ===
+  // Descomentar para borrar datos. Comentar después de usar.
+  try {
+    const dataSource = app.get(DataSource);
+    console.log('⚠️ INICIANDO LIMPIEZA DE BASE DE DATOS... ⚠️');
+    
+    await dataSource.query(`DELETE FROM "payment"`);
+    await dataSource.query(`DELETE FROM "exchange"`);
+    await dataSource.query(`DELETE FROM "capital_movement"`);
+    await dataSource.query(`DELETE FROM "sale"`);
+    await dataSource.query(`DELETE FROM "purchase"`);
+    await dataSource.query(`DELETE FROM "inventory"`);
+    await dataSource.query(`DELETE FROM "global_inventory"`);
+    await dataSource.query(`DELETE FROM "cash_audit"`);
+    
+    // Reset Capital
+    await dataSource.query(`UPDATE "capital" SET "operativePlante" = 0, "accumulatedProfit" = 0`);
+    
+    console.log('✅ BASE DE DATOS LIMPIA (Usuarios y Configuración intactos)');
+  } catch (err) {
+    console.error('Error durante limpieza:', err);
+  }
+  // === FIN LIMPIEZA ===
 
   // Seed de emergencia al iniciar la app
   try {
