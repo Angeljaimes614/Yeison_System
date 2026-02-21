@@ -60,6 +60,9 @@ export class Sale {
   @Column('decimal', { precision: 16, scale: 2 })
   pendingBalance: number; // totalPesos - paidAmount
 
+  @Column({ default: 'INVENTORY' }) // INVENTORY, DIRECT
+  operationType: string;
+
   @Column({ default: 'completed' }) // completed, pending, reversed
   status: string;
 

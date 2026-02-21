@@ -33,6 +33,10 @@ export class CreateSaleDto {
   @IsNotEmpty()
   paymentType: string;
 
+  @IsString()
+  @IsOptional()
+  operationType?: string; // INVENTORY or DIRECT
+
   @IsNumber()
   @IsNotEmpty()
   paidAmount: number;

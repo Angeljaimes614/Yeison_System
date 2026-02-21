@@ -94,8 +94,9 @@ export class SalesService {
 
   async create(createSaleDto: CreateSaleDto) {
     let { branchId } = createSaleDto;
-    const { currencyId, amount, rate, paidAmount } = createSaleDto;
+    const { currencyId, amount, rate, paidAmount, operationType } = createSaleDto;
     const totalPesos = Number(amount) * Number(rate);
+    const isDirect = operationType === 'DIRECT';
 
     // Start Transaction
     const queryRunner = this.dataSource.createQueryRunner();
@@ -111,58 +112,66 @@ export class SalesService {
          }
       }
 
-      // 1. Consume Global Inventory (Weighted Average Cost)
-      // Fetch Global Inventory
-      let globalInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId } });
-      
-      if (!globalInv) {
-          // If no inventory exists, we create a temporary negative one or just proceed with 0 avg cost?
-          // Let's initialize it.
-          globalInv = queryRunner.manager.create(GlobalInventory, {
-            currencyId,
-            totalQuantity: 0,
-            totalCostCOP: 0,
-            averageCost: 0
-          });
+      let profit = 0;
+      let costOfSale = 0;
+
+      if (isDirect) {
+          // DIRECT OPERATION: No Inventory Impact
+          // Profit is simply Total Sale (Assuming 0 cost, OR we need purchase price input for direct operations?)
+          // If it's a "Direct" operation usually implies buy/sell back to back or service.
+          // User said: "En DIRECTA: utilidad = (precio_venta – precio_compra) × cantidad"
+          // BUT we don't have "precio_compra" in CreateSaleDto here?
+          // For now, if user selects DIRECT, we assume it's pure profit or we need to know the base cost.
+          // Wait, if it's "Direct", maybe we should ask for "Base Cost" or assume 0?
+          // Let's assume for now that DIRECT operations are treated as services or 100% profit unless cost provided.
+          // Actually, if user wants (SalePrice - PurchasePrice), they need to input PurchasePrice somewhere.
+          // But CreateSaleDto only has `rate` (Sale Price).
+          // Let's assume for now DIRECT means "Don't touch inventory, just add cash".
+          // Profit = TotalPesos (Risk: 100% profit).
+          // To be safe, let's treat DIRECT as "Service" logic.
+          profit = totalPesos; 
+      } else {
+          // INVENTORY OPERATION (Default)
+          // 1. Consume Global Inventory (Weighted Average Cost)
+          let globalInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId } });
+          
+          if (!globalInv) {
+              globalInv = queryRunner.manager.create(GlobalInventory, {
+                currencyId,
+                totalQuantity: 0,
+                totalCostCOP: 0,
+                averageCost: 0
+              });
+          }
+
+          const currentAvgCost = Number(globalInv.averageCost);
+          const sellQty = Number(amount);
+          
+          // Cost of Goods Sold (COGS)
+          costOfSale = sellQty * currentAvgCost;
+          profit = totalPesos - costOfSale;
+
+          // Update Global Inventory
+          globalInv.totalQuantity = Number(globalInv.totalQuantity) - sellQty;
+          globalInv.totalCostCOP = Number(globalInv.totalCostCOP) - costOfSale;
+          
+          // Safety check
+          if (globalInv.totalQuantity <= 0) {
+              globalInv.totalQuantity = 0;
+              globalInv.totalCostCOP = 0;
+              globalInv.averageCost = 0;
+          }
+          
+          await queryRunner.manager.save(globalInv);
       }
 
-      const currentAvgCost = Number(globalInv.averageCost);
-      const sellQty = Number(amount);
-      
-      // Cost of Goods Sold (COGS)
-      const costOfSale = sellQty * currentAvgCost;
-      
-      // Profit Calculation
-      // Profit = Revenue - Cost
-      // If inventory is 0 or negative, AvgCost is 0 or whatever it was.
-      // If we are selling without inventory (short selling), cost is 0? No, that inflates profit.
-      // Logic: If AvgCost is 0 (because no purchase yet), Profit = Total Sale (which is technically true but risky).
-      // Let's stick to the math: Profit = TotalPesos - (Qty * AvgCost).
-      const profit = totalPesos - costOfSale;
-
-      // Update Global Inventory
-      globalInv.totalQuantity = Number(globalInv.totalQuantity) - sellQty;
-      globalInv.totalCostCOP = Number(globalInv.totalCostCOP) - costOfSale;
-      
-      // Safety check: if qty goes to 0 or negative, reset
-      if (globalInv.totalQuantity <= 0) {
-          globalInv.totalQuantity = 0;
-          globalInv.totalCostCOP = 0;
-          globalInv.averageCost = 0; // Reset average only on zero inventory
-      }
-      
-      await queryRunner.manager.save(globalInv);
-
-      // 2. Consume Legacy Inventory (FIFO Lote) for traceability (Optional but good for history)
-      // We still update the old table just in case, but logic relies on GlobalInventory above.
-      // ... (Legacy code omitted for brevity/speed, or we can keep it as "shadow" process)
-      // Let's keep it simple: We just update the global one as requested.
-      
       // 3. Create Sale Record
       const sale = this.saleRepository.create({
         ...createSaleDto,
         totalPesos,
         profit,
+        costBasis: costOfSale,
+        operationType: isDirect ? 'DIRECT' : 'INVENTORY',
         pendingBalance: totalPesos - paidAmount,
         status: paidAmount >= totalPesos ? 'completed' : 'pending',
       });
