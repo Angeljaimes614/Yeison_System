@@ -17,6 +17,10 @@ export const capitalService = {
   findAll: () => api.get('/capital'),
   findOne: (id: string) => api.get(`/capital/${id}`),
   update: (id: string, data: any) => api.patch(`/capital/${id}`, data),
+  // Financial Movements
+  registerMovement: (data: { type: 'INJECTION' | 'WITHDRAWAL_PROFIT' | 'WITHDRAWAL_CAPITAL', amount: number, description: string, userId: string }) => 
+    api.post('/capital/movements', data),
+  getMovements: () => api.get('/capital/movements'),
 };
 
 export const inventoryService = {

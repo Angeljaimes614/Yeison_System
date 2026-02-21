@@ -28,9 +28,7 @@ const Layout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Operaciones', path: '/operations', icon: ArrowRightLeft },
-    // { name: 'Inventario', path: '/inventory', icon: Package },
-    { name: 'Caja y Capital', path: '/capital', icon: Wallet },
-    // { name: 'Gastos', path: '/expenses', icon: DollarSign },
+    { name: 'Gestión Financiera', path: '/finance', icon: Wallet },
     { name: 'Reportes', path: '/reports', icon: FileText },
     // Only show Users menu to admins
     ...(user?.role === 'admin' ? [{ name: 'Usuarios', path: '/users', icon: Users }] : []),

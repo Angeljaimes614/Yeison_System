@@ -6,7 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Operations from './pages/Operations';
 import Inventory from './pages/Inventory';
 import Expenses from './pages/Expenses';
-import Capital from './pages/Capital';
+import Finance from './pages/Finance';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Layout from './components/Layout';
@@ -32,8 +32,7 @@ function App() {
               </ErrorBoundary>
             } />
             {/* <Route path="inventory" element={<Inventory />} /> */}
-            <Route path="capital" element={<Capital />} />
-            {/* <Route path="expenses" element={<Expenses />} /> */}
+            <Route path="finance" element={<Finance />} />
             <Route path="reports" element={<Reports />} />
             <Route path="users" element={<Users />} />
           </Route>

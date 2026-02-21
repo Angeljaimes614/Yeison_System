@@ -81,12 +81,12 @@ const Dashboard = () => {
 
   // Define display list
   const displayCurrencies = [
-    { code: 'COP', label: 'Total en COP', value: Number(capital?.operativePlante || 0), icon: Wallet, color: 'text-green-600', bg: 'bg-green-50' },
-    { code: 'DÓLAR', label: 'Total en DOLAR', value: inventoryByCurrency['DÓLAR'] || 0, icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { code: 'USDT', label: 'Total en USDT', value: inventoryByCurrency['USDT'] || 0, icon: Coins, color: 'text-teal-600', bg: 'bg-teal-50' },
-    { code: 'EURO', label: 'Total en EURO', value: inventoryByCurrency['EURO'] || 0, icon: Coins, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { code: 'BS', label: 'Total en BS', value: inventoryByCurrency['BS'] || 0, icon: Coins, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-    { code: 'ZELLE', label: 'Total en ZELLE', value: inventoryByCurrency['ZELLE'] || 0, icon: Coins, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { code: 'COP', label: 'Caja Operativa (COP)', value: Number(capital?.operativePlante || 0), icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { code: 'PROFIT', label: 'Utilidad Neta Real', value: Number(capital?.accumulatedProfit || 0), icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
+    { code: 'DÓLAR', label: 'Inventario DÓLAR', value: inventoryByCurrency['DÓLAR'] || 0, icon: DollarSign, color: 'text-gray-600', bg: 'bg-gray-50' },
+    { code: 'USDT', label: 'Inventario USDT', value: inventoryByCurrency['USDT'] || 0, icon: Coins, color: 'text-teal-600', bg: 'bg-teal-50' },
+    { code: 'EURO', label: 'Inventario EURO', value: inventoryByCurrency['EURO'] || 0, icon: Coins, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { code: 'BS', label: 'Inventario BS', value: inventoryByCurrency['BS'] || 0, icon: Coins, color: 'text-yellow-600', bg: 'bg-yellow-50' },
   ];
 
   return (
@@ -130,9 +130,9 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">{curr.label}</p>
                 <h3 className="text-3xl font-bold text-gray-800 mt-2 font-mono">
-                  {curr.code === 'COP' ? '$ ' : ''}
+                  {curr.code === 'COP' || curr.code === 'PROFIT' ? '$ ' : ''}
                   {curr.value.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} 
-                  {curr.code !== 'COP' ? ` ${curr.code}` : ''}
+                  {(curr.code !== 'COP' && curr.code !== 'PROFIT') ? ` ${curr.code}` : ''}
                 </h3>
               </div>
               <div className={`p-3 rounded-lg ${curr.bg}`}>
