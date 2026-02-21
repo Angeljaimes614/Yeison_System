@@ -18,6 +18,7 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CashAuditModule } from './cash-audit/cash-audit.module';
 import { AuthModule } from './auth/auth.module';
+import { ExchangesModule } from './exchanges/exchanges.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { AuthModule } from './auth/auth.module';
     PaymentsModule,
     CashAuditModule,
     AuthModule,
+    ExchangesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
