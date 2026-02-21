@@ -53,7 +53,7 @@ import { AuthModule } from './auth/auth.module';
     ProvidersModule,
     PurchasesModule,
     SalesModule,
-    ExpensesModule,
+    // ExpensesModule, // DISABLED
     PaymentsModule,
     CashAuditModule,
     AuthModule,
