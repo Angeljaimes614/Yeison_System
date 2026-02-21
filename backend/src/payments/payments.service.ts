@@ -46,6 +46,7 @@ export class PaymentsService {
 
       if (purchaseId) {
         // --- PAYING A DEBT (Accounts Payable) ---
+        // Money LEAVES the business
         const purchase = await queryRunner.manager.findOne(Purchase, { where: { id: purchaseId } });
         if (!purchase) throw new NotFoundException(`Purchase ${purchaseId} not found`);
 
@@ -64,6 +65,7 @@ export class PaymentsService {
 
         // 2. Update Global Capital (Money leaves)
         if (Number(capital.operativePlante) < amount) {
+          // Warning but allow? No, you can't pay with money you don't have.
           throw new BadRequestException('Insufficient operative plante (cash) to make this payment');
         }
         capital.operativePlante = Number(capital.operativePlante) - Number(amount);
@@ -71,6 +73,7 @@ export class PaymentsService {
 
       } else {
         // --- RECEIVING PAYMENT (Accounts Receivable) ---
+        // Money ENTERS the business
         const sale = await queryRunner.manager.findOne(Sale, { where: { id: saleId } });
         if (!sale) throw new NotFoundException(`Sale ${saleId} not found`);
 
