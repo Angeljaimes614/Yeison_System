@@ -11,6 +11,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors(); // Habilitar CORS para que el frontend pueda conectarse
   
+  console.log('--- INICIANDO SERVIDOR ERP YEISON ---');
+  console.log('Versión del código: ' + new Date().toISOString());
+
   // Seed de emergencia al iniciar la app
   try {
     const usersService = app.get(UsersService);

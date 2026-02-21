@@ -12,6 +12,11 @@ export class InventoryController {
     return this.inventoryService.create(createInventoryDto);
   }
 
+  @Get('global')
+  findGlobal() {
+    return this.inventoryService.findAllGlobal();
+  }
+
   @Get()
   findAll() {
     return this.inventoryService.findAll();
