@@ -17,6 +17,7 @@ async function bootstrap() {
 
   // === LIMPIEZA DE PRODUCCIÓN (ONE-TIME RUN) ===
   // Descomentar para borrar datos. Comentar después de usar.
+  /*
   try {
     const dataSource = app.get(DataSource);
     console.log('⚠️ INICIANDO LIMPIEZA DE BASE DE DATOS... ⚠️');
@@ -37,6 +38,7 @@ async function bootstrap() {
   } catch (err) {
     console.error('Error durante limpieza:', err);
   }
+  */
   // === FIN LIMPIEZA ===
 
   // Seed de emergencia al iniciar la app
