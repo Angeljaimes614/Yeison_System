@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { capitalService, inventoryService } from '../api/services';
 import { DollarSign, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, Coins } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [capital, setCapital] = useState<any>(null);
   const [inventory, setInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,11 +143,17 @@ const Dashboard = () => {
 
       {/* Accesos Rápidos */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-         <button className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg shadow transition-colors flex items-center justify-center text-lg font-semibold">
+         <button 
+           onClick={() => navigate('/operations', { state: { tab: 'purchase' } })}
+           className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg shadow transition-colors flex items-center justify-center text-lg font-semibold"
+         >
            <ArrowDownRight className="mr-2 h-6 w-6" />
            Nueva Compra
          </button>
-         <button className="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg shadow transition-colors flex items-center justify-center text-lg font-semibold">
+         <button 
+           onClick={() => navigate('/operations', { state: { tab: 'sale' } })}
+           className="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg shadow transition-colors flex items-center justify-center text-lg font-semibold"
+         >
            <ArrowUpRight className="mr-2 h-6 w-6" />
            Nueva Venta
          </button>
