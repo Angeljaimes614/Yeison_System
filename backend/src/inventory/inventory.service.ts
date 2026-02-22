@@ -72,10 +72,17 @@ export class InventoryService {
     const globalInv = await repo.findOne({ where: { currencyId } });
     if (!globalInv) throw new NotFoundException('Inventory not found for this currency');
 
-    const currentAvg = Number(globalInv.averageCost);
-    const costOfSale = Number(quantity) * currentAvg;
+    const sellQty = Number(quantity);
+    if (Number(globalInv.totalQuantity) < sellQty) {
+        throw new NotFoundException( // Using NotFoundException for simplicity in error handling catch blocks or BadRequest
+            `Saldo insuficiente en inventario. Tienes ${globalInv.totalQuantity} y quieres usar ${sellQty}.`
+        );
+    }
 
-    globalInv.totalQuantity = Number(globalInv.totalQuantity) - Number(quantity);
+    const currentAvg = Number(globalInv.averageCost);
+    const costOfSale = sellQty * currentAvg;
+
+    globalInv.totalQuantity = Number(globalInv.totalQuantity) - sellQty;
     globalInv.totalCostCOP = Number(globalInv.totalCostCOP) - costOfSale;
     
     // Safety check: if qty goes to 0 or negative, reset

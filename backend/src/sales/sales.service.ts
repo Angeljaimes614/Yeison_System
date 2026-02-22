@@ -146,6 +146,13 @@ export class SalesService {
 
           const currentAvgCost = Number(globalInv.averageCost);
           const sellQty = Number(amount);
+
+          // --- VALIDATION: Check for Sufficient Inventory ---
+          if (Number(globalInv.totalQuantity) < sellQty) {
+              throw new BadRequestException(
+                  `Saldo insuficiente en inventario. Tienes ${globalInv.totalQuantity} y quieres vender ${sellQty}.`
+              );
+          }
           
           // Cost of Goods Sold (COGS)
           costOfSale = sellQty * currentAvgCost;
