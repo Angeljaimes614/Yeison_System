@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import { ArrowDownRight, ArrowUpRight, Calculator, Check, AlertCircle, Building2, RefreshCw } from 'lucide-react';
 import { 
   currenciesService, 
@@ -14,7 +15,15 @@ import {
 
 const Operations = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'purchase' | 'sale' | 'exchange'>('purchase');
+  
+  // Initialize tab from location state if present
+  useEffect(() => {
+    if (location.state && location.state.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location]);
   
   // Data State
   const [currencies, setCurrencies] = useState<any[]>([]);
