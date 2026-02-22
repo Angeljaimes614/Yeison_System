@@ -28,16 +28,11 @@ const Dashboard = () => {
       setCapital({...userCapital}); 
       console.log('Set Capital State:', userCapital);
 
-      // Fetch Inventory
-      const inventoryRes = await inventoryService.findAll();
+      // Fetch Global Inventory
+      const inventoryRes = await inventoryService.findGlobal();
       
-      // If admin, show all inventory (Global View). Otherwise, filter by branch.
-      let userInventory = inventoryRes.data;
-      if (user?.role !== 'admin') {
-         userInventory = inventoryRes.data.filter((i: any) => i.branchId === user?.branchId);
-      }
-      
-      setInventory(userInventory);
+      // Global Inventory is already aggregated
+      setInventory(inventoryRes.data);
       setLastUpdated(new Date());
 
     } catch (error) {
@@ -62,19 +57,20 @@ const Dashboard = () => {
     return <div className="p-8 text-center">Cargando dashboard...</div>;
   }
 
-  // Calculate totals by currency
+  // Calculate totals by currency from GlobalInventory
   const inventoryByCurrency = inventory.reduce((acc: any, item: any) => {
-    // Check if currency object exists, otherwise use currencyId as fallback if needed, but display requires code
-    const currency = item.currency?.code; 
+    // GlobalInventory has currencyId and totalQuantity.
+    // We need to match currencyId to Code.
+    // Or, check if GlobalInventory response includes 'currency' relation.
+    // Assuming backend returns: { currencyId: '...', totalQuantity: '...', currency: { code: 'USD' } }
     
-    // Only process if we have a valid currency code
-    if (currency) {
-        if (!acc[currency]) {
-          acc[currency] = 0;
+    const currencyCode = item.currency?.code;
+    
+    if (currencyCode) {
+        if (!acc[currencyCode]) {
+          acc[currencyCode] = 0;
         }
-        // IMPORTANT: Sum everything, even if status is 'depleted' if currentBalance > 0
-        // (Though depleted should be 0, safety check)
-        acc[currency] += Number(item.currentBalance);
+        acc[currencyCode] += Number(item.totalQuantity);
     }
     return acc;
   }, {});
