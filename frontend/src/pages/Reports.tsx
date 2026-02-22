@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { purchasesService, salesService, paymentsService } from '../api/services';
-import { FileText, RotateCcw, Wallet } from 'lucide-react';
+import { purchasesService, salesService, paymentsService, exchangesService } from '../api/services';
+import { FileText, RotateCcw, Wallet, RefreshCw } from 'lucide-react';
 
 const Reports = () => {
   const { user } = useAuth();
@@ -24,9 +24,10 @@ const Reports = () => {
 
   const loadTransactions = async () => {
     try {
-      const [purchasesRes, salesRes] = await Promise.all([
+      const [purchasesRes, salesRes, exchangesRes] = await Promise.all([
         purchasesService.findAll(),
-        salesService.findAll()
+        salesService.findAll(),
+        exchangesService.findAll()
       ]);
 
       const purchases = purchasesRes.data
@@ -37,7 +38,23 @@ const Reports = () => {
         .filter((s: any) => !user?.branchId || s.branchId === user?.branchId) 
         .map((s: any) => ({ ...s, type: 'VENTA' }));
 
-      const all = [...purchases, ...sales].sort((a, b) => 
+      const exchanges = exchangesRes.data
+        .map((e: any) => ({
+           ...e,
+           type: 'CONVERSIÓN',
+           amount: e.sourceAmount, // Show source amount
+           totalPesos: 0, // No cash value for now or show transfer value?
+           status: 'completed', // Exchanges are always completed
+           // Custom fields for display
+           providerName: 'Interno',
+           clientName: 'Interno',
+           rate: e.exchangeRate,
+           currency: e.sourceCurrency,
+           targetCurrency: e.targetCurrency,
+           targetAmount: e.targetAmount
+        }));
+
+      const all = [...purchases, ...sales, ...exchanges].sort((a, b) => 
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 
@@ -225,30 +242,35 @@ const Reports = () => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     tx.status === 'reversed' ? 'bg-gray-200 text-gray-600 line-through' :
-                    tx.type === 'COMPRA' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    tx.type === 'COMPRA' ? 'bg-blue-100 text-blue-800' : 
+                    tx.type === 'VENTA' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
                   }`}>
                     {tx.type} {tx.status === 'reversed' ? '(ANULADA)' : ''}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {tx.type === 'COMPRA' 
+                  {tx.type === 'CONVERSIÓN' ? 'Interno' :
+                    (tx.type === 'COMPRA' 
                     ? (tx.provider?.name || tx.providerName || 'Proveedor General') 
-                    : (tx.client?.name || tx.clientName || 'Cliente General')}
+                    : (tx.client?.name || tx.clientName || 'Cliente General'))
+                  }
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {tx.currency?.code}
+                  {tx.currency?.code} {tx.type === 'CONVERSIÓN' ? `→ ${tx.targetCurrency?.code}` : ''}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  {Number(tx.amount).toLocaleString('es-CO')}
+                  {Number(tx.amount).toLocaleString('es-CO')} {tx.type === 'CONVERSIÓN' ? `→ ${Number(tx.targetAmount).toLocaleString('es-CO')}` : ''}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
                   {Number(tx.rate).toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                  $ {Number(tx.totalPesos).toLocaleString('es-CO')}
+                  {tx.type === 'CONVERSIÓN' ? '-' : `$ ${Number(tx.totalPesos).toLocaleString('es-CO')}`}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                   {tx.status === 'reversed' ? (
+                   {tx.type === 'CONVERSIÓN' ? (
+                      <span className="text-purple-600 text-xs font-bold">Completado</span>
+                   ) : tx.status === 'reversed' ? (
                       <span className="text-gray-500 text-xs font-bold">ANULADO</span>
                    ) : tx.pendingBalance > 0 ? (
                      <span className="text-red-600 text-xs font-bold">
@@ -259,7 +281,7 @@ const Reports = () => {
                    )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {tx.status !== 'reversed' && (
+                  {tx.status !== 'reversed' && tx.type !== 'CONVERSIÓN' && (
                     <div className="flex justify-end gap-2">
                       {tx.pendingBalance > 0 && (
                         <button
