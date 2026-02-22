@@ -4,6 +4,8 @@ import { Repository, DataSource } from 'typeorm';
 import { Exchange } from './entities/exchange.entity';
 import { InventoryService } from '../inventory/inventory.service';
 
+import { User } from '../users/entities/user.entity';
+
 @Injectable()
 export class ExchangesService {
   constructor(
@@ -21,6 +23,9 @@ export class ExchangesService {
     await queryRunner.startTransaction();
 
     try {
+      // Find User Branch
+      const user = await queryRunner.manager.findOne(User, { where: { id: userId }, relations: ['branch'] });
+      const branchId = user?.branchId;
       // 1. Consume Source Currency (Register Sale Logic but keep cost)
       // We need to know the Average Cost to transfer it.
       // The inventoryService.registerSale updates quantity and total cost, but we need to know HOW MUCH cost was removed.
@@ -42,16 +47,16 @@ export class ExchangesService {
         targetCurrencyId,
         sourceAmount,
         targetAmount,
-        exchangeRate,
+        exchangeRate: exchangeRate,
         costTransferredCOP: costTransferred,
         createdById: userId,
+        branchId: branchId, // Assign Branch
       });
       
       await queryRunner.manager.save(exchange);
 
       await queryRunner.commitTransaction();
       return exchange;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -62,7 +67,7 @@ export class ExchangesService {
 
   findAll() {
     return this.exchangeRepository.find({
-      relations: ['sourceCurrency', 'targetCurrency', 'createdBy'],
+      relations: ['sourceCurrency', 'targetCurrency', 'createdBy', 'branch'],
       order: { date: 'DESC' }
     });
   }

@@ -1,11 +1,19 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Currency } from '../../currencies/entities/currency.entity';
 import { User } from '../../users/entities/user.entity';
+import { Branch } from '../../branches/entities/branch.entity';
 
 @Entity()
 export class Exchange {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ nullable: true })
+  branchId: string;
+
+  @ManyToOne(() => Branch, { nullable: true })
+  @JoinColumn({ name: 'branchId' })
+  branch: Branch;
 
   @Column()
   sourceCurrencyId: string;
