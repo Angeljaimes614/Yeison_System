@@ -71,7 +71,9 @@ export const paymentsService = {
 
 export const investmentsService = {
   create: (data: any) => api.post('/investments', data),
+  sell: (data: any) => api.post('/investments/sell', data),
   findAll: () => api.get('/investments'),
+  findTransactions: (id: string) => api.get(`/investments/${id}/transactions`),
 };
 
 export const cashAuditService = {
