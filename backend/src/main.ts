@@ -15,30 +15,21 @@ async function bootstrap() {
   console.log('--- INICIANDO SERVIDOR ERP YEISON [PROD] ---');
   console.log('Versión del código: ' + new Date().toISOString());
 
-  // === LIMPIEZA DE PRODUCCIÓN (ONE-TIME RUN) ===
-  // Descomentar para borrar datos. Comentar después de usar.
-  /*
+  // === LIMPIEZA DE TABLA INVERSIONES (MIGRACIÓN MANUAL) ===
   try {
     const dataSource = app.get(DataSource);
-    console.log('⚠️ INICIANDO LIMPIEZA DE BASE DE DATOS... ⚠️');
+    console.log('⚠️ REINICIANDO TABLA INVERSIONES POR CAMBIO DE ESQUEMA... ⚠️');
     
-    await dataSource.query(`DELETE FROM "payment"`);
-    await dataSource.query(`DELETE FROM "exchange"`);
-    await dataSource.query(`DELETE FROM "capital_movement"`);
-    await dataSource.query(`DELETE FROM "sale"`);
-    await dataSource.query(`DELETE FROM "purchase"`);
-    await dataSource.query(`DELETE FROM "inventory"`);
-    await dataSource.query(`DELETE FROM "global_inventory"`);
-    await dataSource.query(`DELETE FROM "cash_audit"`);
+    // Primero borrar transacciones hijas si existen (aunque la tabla nueva no existe aún)
+    try { await dataSource.query(`DROP TABLE IF EXISTS "investment_transaction"`); } catch(e) {}
     
-    // Reset Capital
-    await dataSource.query(`UPDATE "capital" SET "operativePlante" = 0, "accumulatedProfit" = 0`);
+    // Borrar tabla padre para que TypeORM la re-cree limpia
+    await dataSource.query(`DROP TABLE IF EXISTS "investment"`);
     
-    console.log('✅ BASE DE DATOS LIMPIA (Usuarios y Configuración intactos)');
+    console.log('✅ TABLA INVERSIONES ELIMINADA (TypeORM la recreará)');
   } catch (err) {
-    console.error('Error durante limpieza:', err);
+    console.error('Error durante limpieza parcial:', err);
   }
-  */
   // === FIN LIMPIEZA ===
 
   // Seed de emergencia al iniciar la app
