@@ -1,5 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { InvestmentTransaction } from './investment-transaction.entity';
 
 @Entity()
 export class Investment {
@@ -7,16 +8,22 @@ export class Investment {
   id: string;
 
   @Column()
-  type: 'INVERSION' | 'RETORNO'; // INVERSION = Salida de Caja, RETORNO = Entrada a Caja
-
-  @Column()
-  concept: string; // Ej: "Compra de 5 Celulares", "Venta Taco Billar"
+  name: string; // Ej: "Celular Samsung A54" (Antes 'concept')
 
   @Column('decimal', { precision: 16, scale: 2 })
-  amount: number; // Monto total que entra o sale
+  totalCost: number; // Costo Total de la Inversión (Sale de Caja)
 
-  @Column('decimal', { precision: 16, scale: 2, default: 0 })
-  profit: number; // Solo para RETORNO. Cuánto de ese monto es ganancia neta.
+  @Column('decimal', { precision: 16, scale: 2 })
+  unitCost: number; // Costo por unidad (Calculado: totalCost / initialQuantity)
+
+  @Column('int')
+  initialQuantity: number; // Cantidad comprada
+
+  @Column('int')
+  currentQuantity: number; // Cantidad disponible (Stock)
+
+  @Column({ default: 'ACTIVE' })
+  status: 'ACTIVE' | 'SOLD_OUT'; // Si currentQuantity = 0 -> SOLD_OUT
 
   @Column({ nullable: true })
   createdById: string;
@@ -24,6 +31,9 @@ export class Investment {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'createdById' })
   createdBy: User;
+
+  @OneToMany(() => InvestmentTransaction, (tx) => tx.investment)
+  transactions: InvestmentTransaction[];
 
   @CreateDateColumn()
   date: Date;
