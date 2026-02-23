@@ -11,7 +11,8 @@ import {
   LogOut, 
   Menu,
   X,
-  Users
+  Users,
+  TrendingUp
 } from 'lucide-react';
 
 const Layout = () => {
@@ -28,6 +29,7 @@ const Layout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Operaciones', path: '/operations', icon: ArrowRightLeft },
+    { name: 'Inversiones', path: '/investments', icon: TrendingUp },
     { name: 'Gestión Financiera', path: '/finance', icon: Wallet },
     { name: 'Reportes', path: '/reports', icon: FileText },
     // Only show Users menu to admins

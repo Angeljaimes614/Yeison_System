@@ -9,6 +9,7 @@ import Expenses from './pages/Expenses';
 import Finance from './pages/Finance';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
+import Investments from './pages/Investments';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -34,6 +35,7 @@ function App() {
             {/* <Route path="inventory" element={<Inventory />} /> */}
             <Route path="finance" element={<Finance />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="investments" element={<Investments />} />
             <Route path="users" element={<Users />} />
           </Route>
 
