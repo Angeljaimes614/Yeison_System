@@ -16,6 +16,7 @@ async function bootstrap() {
   console.log('Versión del código: ' + new Date().toISOString());
 
   // === LIMPIEZA DE TABLA INVERSIONES (MIGRACIÓN MANUAL) ===
+  /*
   try {
     const dataSource = app.get(DataSource);
     console.log('⚠️ REINICIANDO TABLA INVERSIONES POR CAMBIO DE ESQUEMA... ⚠️');
@@ -30,6 +31,7 @@ async function bootstrap() {
   } catch (err) {
     console.error('Error durante limpieza parcial:', err);
   }
+  */
   // === FIN LIMPIEZA ===
 
   // Seed de emergencia al iniciar la app

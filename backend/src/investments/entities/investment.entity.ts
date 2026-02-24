@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, Jo
 import { User } from '../../users/entities/user.entity';
 import { InvestmentTransaction } from './investment-transaction.entity';
 
-@Entity()
+@Entity('investment_products') // Rename table to avoid conflict with old schema
 export class Investment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
