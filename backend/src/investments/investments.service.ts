@@ -134,6 +134,78 @@ export class InvestmentsService {
     }
   }
 
+  // 3. RESTOCK (Add more units to existing investment)
+  async restock(data: { investmentId: string; quantity: number; totalCost: number; userId: string }) {
+    const { investmentId, quantity, totalCost, userId } = data;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Find Investment
+      const investment = await queryRunner.manager.findOne(Investment, { where: { id: investmentId } });
+      if (!investment) throw new NotFoundException('Producto no encontrado');
+
+      // Check Funds
+      const capitals = await queryRunner.manager.find(Capital);
+      const capital = capitals[0];
+      if (Number(capital.operativePlante) < totalCost) {
+          throw new BadRequestException('Fondos insuficientes para reabastecer');
+      }
+
+      // Deduct from Capital
+      capital.operativePlante = Number(capital.operativePlante) - Number(totalCost);
+      await queryRunner.manager.save(capital);
+
+      // Recalculate Unit Cost (Weighted Average)
+      const currentValuation = Number(investment.currentQuantity) * Number(investment.unitCost);
+      const newValuation = currentValuation + Number(totalCost);
+      const newTotalQuantity = Number(investment.currentQuantity) + Number(quantity);
+      
+      const newUnitCost = newTotalQuantity > 0 ? newValuation / newTotalQuantity : 0;
+
+      // Update Investment
+      investment.currentQuantity = newTotalQuantity;
+      investment.initialQuantity = Number(investment.initialQuantity) + Number(quantity); // Track total bought historically
+      investment.totalCost = Number(investment.totalCost) + Number(totalCost); // Track total spent historically
+      investment.unitCost = newUnitCost;
+      investment.status = 'ACTIVE'; // Reactivate if it was SOLD_OUT
+      
+      await queryRunner.manager.save(investment);
+
+      await queryRunner.commitTransaction();
+      return investment;
+
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // 4. DELETE INVESTMENT
+  async remove(id: string) {
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+          // Delete transactions first (Cascade usually handles this but safer manually if no cascade)
+          await queryRunner.manager.delete(InvestmentTransaction, { investmentId: id });
+          await queryRunner.manager.delete(Investment, { id });
+          
+          await queryRunner.commitTransaction();
+          return { message: 'Producto eliminado correctamente' };
+      } catch (err) {
+          await queryRunner.rollbackTransaction();
+          throw err;
+      } finally {
+          await queryRunner.release();
+      }
+  }
+
   findAll() {
     return this.investmentRepository.find({
         relations: ['createdBy'],

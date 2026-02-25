@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
 import { InvestmentsService } from './investments.service';
 
 @Controller('investments')
@@ -15,6 +15,18 @@ export class InvestmentsController {
   @Post('sell')
   sell(@Body() dto: { investmentId: string; quantity: number; salePrice: number; userId: string }) {
     return this.investmentsService.registerSale(dto);
+  }
+
+  // 3. Restock
+  @Post('restock')
+  restock(@Body() dto: { investmentId: string; quantity: number; totalCost: number; userId: string }) {
+    return this.investmentsService.restock(dto);
+  }
+
+  // 4. Delete
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.investmentsService.remove(id);
   }
 
   @Get()
