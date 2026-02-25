@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { investmentsService } from '../api/services';
-import { TrendingUp, Package, PlusCircle, ShoppingCart, History, ArrowRight } from 'lucide-react';
+import { TrendingUp, Package, PlusCircle, ShoppingCart, History, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 
 const Investments = () => {
   const { user } = useAuth();
   const [investments, setInvestments] = useState<any[]>([]);
+  const [groupedInvestments, setGroupedInvestments] = useState<Record<string, any[]>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   
   // Modals State
@@ -17,6 +19,7 @@ const Investments = () => {
 
   // Forms
   const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('');
   const [totalCost, setTotalCost] = useState('');
   const [sellQuantity, setSellQuantity] = useState('');
@@ -30,6 +33,21 @@ const Investments = () => {
     try {
       const res = await investmentsService.findAll();
       setInvestments(res.data);
+      
+      // Group by Category
+      const grouped = res.data.reduce((acc: any, inv: any) => {
+        const cat = inv.category || 'General';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(inv);
+        return acc;
+      }, {});
+      
+      setGroupedInvestments(grouped);
+      // Auto expand all categories by default
+      const expanded: any = {};
+      Object.keys(grouped).forEach(cat => expanded[cat] = true);
+      setExpandedCategories(expanded);
+
     } catch (error) {
       console.error(error);
     } finally {
@@ -37,11 +55,16 @@ const Investments = () => {
     }
   };
 
+  const toggleCategory = (cat: string) => {
+    setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await investmentsService.create({
         name,
+        category,
         quantity: Number(quantity),
         totalCost: Number(totalCost),
         userId: user?.id
@@ -49,6 +72,7 @@ const Investments = () => {
       alert('Producto creado correctamente');
       setShowCreateModal(false);
       setName('');
+      setCategory('');
       setQuantity('');
       setTotalCost('');
       loadData();
@@ -110,51 +134,72 @@ const Investments = () => {
         </button>
       </div>
 
-      {/* Grid de Productos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {investments.map((inv) => (
-          <div key={inv.id} className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${inv.status === 'ACTIVE' ? 'border-green-500' : 'border-gray-400 bg-gray-50'}`}>
-            <div className="flex justify-between items-start mb-4">
-               <h3 className="text-lg font-bold text-gray-800">{inv.name}</h3>
-               <span className={`px-2 py-1 text-xs rounded-full ${inv.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
-                 {inv.status === 'ACTIVE' ? 'Disponible' : 'Agotado'}
-               </span>
-            </div>
+      {/* Grid de Productos Agrupados */}
+      <div className="space-y-8">
+        {Object.keys(groupedInvestments).map((categoryName) => (
+          <div key={categoryName} className="border rounded-lg overflow-hidden bg-white shadow-sm">
+            <button 
+              onClick={() => toggleCategory(categoryName)}
+              className="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition-colors border-b"
+            >
+              <h2 className="text-lg font-bold text-gray-800 flex items-center">
+                {expandedCategories[categoryName] ? <ChevronUp className="mr-2 h-5 w-5 text-purple-600" /> : <ChevronDown className="mr-2 h-5 w-5 text-gray-400" />}
+                {categoryName.toUpperCase()}
+                <span className="ml-3 text-xs font-normal bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                  {groupedInvestments[categoryName].length} Productos
+                </span>
+              </h2>
+            </button>
             
-            <div className="space-y-2 mb-6">
-               <div className="flex justify-between text-sm">
-                 <span className="text-gray-500">Stock Actual:</span>
-                 <span className="font-bold">{inv.currentQuantity} / {inv.initialQuantity}</span>
-               </div>
-               <div className="flex justify-between text-sm">
-                 <span className="text-gray-500">Costo Unitario:</span>
-                 <span className="font-mono">$ {Number(inv.unitCost).toLocaleString('es-CO')}</span>
-               </div>
-               <div className="flex justify-between text-sm border-t pt-2 mt-2">
-                 <span className="text-gray-500">Inversión Total:</span>
-                 <span className="font-bold text-red-600">$ {Number(inv.totalCost).toLocaleString('es-CO')}</span>
-               </div>
-            </div>
+            {expandedCategories[categoryName] && (
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-gray-50/50">
+                {groupedInvestments[categoryName].map((inv) => (
+                  <div key={inv.id} className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${inv.status === 'ACTIVE' ? 'border-green-500' : 'border-gray-400 bg-gray-50'}`}>
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-bold text-gray-800">{inv.name}</h3>
+                      <span className={`px-2 py-1 text-xs rounded-full ${inv.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                        {inv.status === 'ACTIVE' ? 'Disponible' : 'Agotado'}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2 mb-6">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Stock Actual:</span>
+                        <span className="font-bold">{inv.currentQuantity} / {inv.initialQuantity}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Costo Unitario:</span>
+                        <span className="font-mono">$ {Number(inv.unitCost).toLocaleString('es-CO')}</span>
+                      </div>
+                      <div className="flex justify-between text-sm border-t pt-2 mt-2">
+                        <span className="text-gray-500">Inversión Total:</span>
+                        <span className="font-bold text-red-600">$ {Number(inv.totalCost).toLocaleString('es-CO')}</span>
+                      </div>
+                    </div>
 
-            <div className="flex gap-2">
-               <button 
-                 onClick={() => openSellModal(inv)}
-                 disabled={inv.status !== 'ACTIVE'}
-                 className={`flex-1 flex items-center justify-center py-2 rounded-md text-white transition-colors ${
-                    inv.status === 'ACTIVE' ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
-                 }`}
-               >
-                 <ShoppingCart className="h-4 w-4 mr-2" />
-                 Vender
-               </button>
-               <button 
-                 onClick={() => openHistoryModal(inv)}
-                 className="flex-1 flex items-center justify-center py-2 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
-               >
-                 <History className="h-4 w-4 mr-2" />
-                 Historial
-               </button>
-            </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => openSellModal(inv)}
+                        disabled={inv.status !== 'ACTIVE'}
+                        className={`flex-1 flex items-center justify-center py-2 rounded-md text-white transition-colors ${
+                            inv.status === 'ACTIVE' ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Vender
+                      </button>
+                      <button 
+                        onClick={() => openHistoryModal(inv)}
+                        className="flex-1 flex items-center justify-center py-2 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                      >
+                        <History className="h-4 w-4 mr-2" />
+                        Historial
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -175,6 +220,23 @@ const Investments = () => {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700">Nombre del Producto</label>
                 <input type="text" required className="w-full border rounded p-2 mt-1" value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Celular Samsung A54" />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Categoría</label>
+                <input 
+                  type="text" 
+                  className="w-full border rounded p-2 mt-1" 
+                  value={category} 
+                  onChange={e => setCategory(e.target.value)} 
+                  placeholder="Ej: Celulares, Billares (Opcional)" 
+                  list="categories"
+                />
+                <datalist id="categories">
+                  <option value="Celulares" />
+                  <option value="Billares" />
+                  <option value="Vehículos" />
+                  <option value="Varios" />
+                </datalist>
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700">Cantidad Comprada</label>
