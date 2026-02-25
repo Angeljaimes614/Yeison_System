@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Users,
-  TrendingUp
+  TrendingUp,
+  Clock
 } from 'lucide-react';
 
 const Layout = () => {
@@ -29,6 +30,7 @@ const Layout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Operaciones', path: '/operations', icon: ArrowRightLeft },
+    { name: 'Cartera (Deudas)', path: '/debts', icon: Clock },
     { name: 'Inversiones', path: '/investments', icon: TrendingUp },
     { name: 'Gestión Financiera', path: '/finance', icon: Wallet },
     { name: 'Reportes', path: '/reports', icon: FileText },
