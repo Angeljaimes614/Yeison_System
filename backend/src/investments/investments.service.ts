@@ -192,9 +192,12 @@ export class InvestmentsService {
       await queryRunner.startTransaction();
 
       try {
-          // Delete transactions first (Cascade usually handles this but safer manually if no cascade)
-          await queryRunner.manager.delete(InvestmentTransaction, { investmentId: id });
-          await queryRunner.manager.delete(Investment, { id });
+          // Delete transactions first (Using raw query to bypass any TypeORM mapping issues)
+          // Note: Table name is 'investment_transaction' by default, column is 'investmentId'
+          await queryRunner.query(`DELETE FROM "investment_transaction" WHERE "investmentId" = $1`, [id]);
+          
+          // Delete parent (Table name is 'investment_products')
+          await queryRunner.query(`DELETE FROM "investment_products" WHERE "id" = $1`, [id]);
           
           await queryRunner.commitTransaction();
           return { message: 'Producto eliminado correctamente' };

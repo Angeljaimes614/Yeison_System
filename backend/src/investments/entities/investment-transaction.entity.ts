@@ -10,7 +10,7 @@ export class InvestmentTransaction {
   @Column()
   investmentId: string;
 
-  @ManyToOne(() => Investment, (inv) => inv.transactions)
+  @ManyToOne(() => Investment, (inv) => inv.transactions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'investmentId' })
   investment: Investment;
 
