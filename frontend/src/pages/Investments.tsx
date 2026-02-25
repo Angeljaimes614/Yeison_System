@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { investmentsService } from '../api/services';
-import { TrendingUp, Package, PlusCircle, ShoppingCart, History, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, Package, PlusCircle, ShoppingCart, History, ArrowRight, ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
 
 const Investments = () => {
   const { user } = useAuth();
@@ -13,7 +13,9 @@ const Investments = () => {
   // Modals State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSellModal, setShowSellModal] = useState(false);
+  const [showRestockModal, setShowRestockModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  
   const [selectedInvestment, setSelectedInvestment] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
 
@@ -22,6 +24,7 @@ const Investments = () => {
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('');
   const [totalCost, setTotalCost] = useState('');
+  
   const [sellQuantity, setSellQuantity] = useState('');
   const [salePrice, setSalePrice] = useState('');
 
@@ -43,10 +46,13 @@ const Investments = () => {
       }, {});
       
       setGroupedInvestments(grouped);
-      // Auto expand all categories by default
-      const expanded: any = {};
-      Object.keys(grouped).forEach(cat => expanded[cat] = true);
-      setExpandedCategories(expanded);
+      
+      // Auto expand categories if not set yet
+      if (Object.keys(expandedCategories).length === 0) {
+        const expanded: any = {};
+        Object.keys(grouped).forEach(cat => expanded[cat] = true);
+        setExpandedCategories(expanded);
+      }
 
     } catch (error) {
       console.error(error);
@@ -102,9 +108,49 @@ const Investments = () => {
     }
   };
 
+  const handleRestock = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedInvestment) return;
+
+      try {
+          await investmentsService.restock({
+              investmentId: selectedInvestment.id,
+              quantity: Number(quantity),
+              totalCost: Number(totalCost),
+              userId: user?.id
+          });
+          alert('Reabastecimiento exitoso');
+          setShowRestockModal(false);
+          setQuantity('');
+          setTotalCost('');
+          loadData();
+      } catch (error: any) {
+          alert(error.response?.data?.message || 'Error al reabastecer');
+      }
+  };
+
+  const handleDelete = async (inv: any) => {
+      if (!window.confirm(`¿Estás seguro de eliminar "${inv.name}"? Se borrará todo su historial.`)) return;
+
+      try {
+          await investmentsService.remove(inv.id);
+          alert('Producto eliminado');
+          loadData();
+      } catch (error: any) {
+          alert('Error al eliminar');
+      }
+  };
+
   const openSellModal = (inv: any) => {
     setSelectedInvestment(inv);
     setShowSellModal(true);
+  };
+
+  const openRestockModal = (inv: any) => {
+      setSelectedInvestment(inv);
+      setQuantity('');
+      setTotalCost('');
+      setShowRestockModal(true);
   };
 
   const openHistoryModal = async (inv: any) => {
@@ -157,9 +203,14 @@ const Investments = () => {
                   <div key={inv.id} className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${inv.status === 'ACTIVE' ? 'border-green-500' : 'border-gray-400 bg-gray-50'}`}>
                     <div className="flex justify-between items-start mb-4">
                       <h3 className="text-lg font-bold text-gray-800">{inv.name}</h3>
-                      <span className={`px-2 py-1 text-xs rounded-full ${inv.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
-                        {inv.status === 'ACTIVE' ? 'Disponible' : 'Agotado'}
-                      </span>
+                      <div className="flex gap-1">
+                          <span className={`px-2 py-1 text-xs rounded-full ${inv.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                            {inv.status === 'ACTIVE' ? 'Disponible' : 'Agotado'}
+                          </span>
+                          <button onClick={() => handleDelete(inv)} className="text-red-400 hover:text-red-600 p-0.5">
+                              <Trash2 className="h-4 w-4" />
+                          </button>
+                      </div>
                     </div>
                     
                     <div className="space-y-2 mb-6">
@@ -168,34 +219,38 @@ const Investments = () => {
                         <span className="font-bold">{inv.currentQuantity} / {inv.initialQuantity}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Costo Unitario:</span>
+                        <span className="text-gray-500">Costo Promedio:</span>
                         <span className="font-mono">$ {Number(inv.unitCost).toLocaleString('es-CO')}</span>
                       </div>
                       <div className="flex justify-between text-sm border-t pt-2 mt-2">
-                        <span className="text-gray-500">Inversión Total:</span>
+                        <span className="text-gray-500">Inversión Total Histórica:</span>
                         <span className="font-bold text-red-600">$ {Number(inv.totalCost).toLocaleString('es-CO')}</span>
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => openSellModal(inv)}
-                        disabled={inv.status !== 'ACTIVE'}
-                        className={`flex-1 flex items-center justify-center py-2 rounded-md text-white transition-colors ${
-                            inv.status === 'ACTIVE' ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
-                        }`}
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Vender
-                      </button>
-                      <button 
-                        onClick={() => openHistoryModal(inv)}
-                        className="flex-1 flex items-center justify-center py-2 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
-                      >
-                        <History className="h-4 w-4 mr-2" />
-                        Historial
-                      </button>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                        <button 
+                            onClick={() => openSellModal(inv)}
+                            disabled={inv.status !== 'ACTIVE'}
+                            className={`flex items-center justify-center py-2 rounded-md text-white transition-colors text-sm ${
+                                inv.status === 'ACTIVE' ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                            <ShoppingCart className="h-4 w-4 mr-1" /> Vender
+                        </button>
+                        <button 
+                            onClick={() => openRestockModal(inv)}
+                            className="flex items-center justify-center py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 text-sm"
+                        >
+                            <RefreshCw className="h-4 w-4 mr-1" /> Surtir
+                        </button>
                     </div>
+                    <button 
+                        onClick={() => openHistoryModal(inv)}
+                        className="w-full flex items-center justify-center py-2 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 text-sm"
+                    >
+                        <History className="h-4 w-4 mr-2" /> Historial
+                    </button>
                   </div>
                 ))}
               </div>
@@ -292,6 +347,35 @@ const Investments = () => {
               <div className="flex justify-end gap-2 mt-6">
                 <button type="button" onClick={() => setShowSellModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Confirmar Venta</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reabastecer */}
+      {showRestockModal && selectedInvestment && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Reabastecer (Surtir)</h2>
+            <p className="text-sm text-gray-600 mb-4">Producto: <strong>{selectedInvestment.name}</strong></p>
+            <div className="bg-blue-50 p-3 rounded mb-4 text-xs text-blue-800">
+                Al reabastecer, se calculará un nuevo costo promedio ponderado entre el stock actual y lo nuevo que ingresa.
+            </div>
+            <form onSubmit={handleRestock}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Cantidad Nueva a Ingresar</label>
+                <input type="number" required min="1" className="w-full border rounded p-2 mt-1" value={quantity} onChange={e => setQuantity(e.target.value)} />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Costo Total de la Nueva Mercancía (Sale de Caja)</label>
+                <input type="number" required className="w-full border rounded p-2 mt-1" value={totalCost} onChange={e => setTotalCost(e.target.value)} />
+                <p className="text-xs text-gray-500 mt-1">Costo Unitario Nuevo Lote: $ {quantity && totalCost ? (Number(totalCost)/Number(quantity)).toLocaleString('es-CO') : 0}</p>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <button type="button" onClick={() => setShowRestockModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Reabastecer</button>
               </div>
             </form>
           </div>
