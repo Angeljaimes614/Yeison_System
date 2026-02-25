@@ -16,8 +16,8 @@ export class InvestmentsService {
   ) {}
 
   // 1. REGISTER NEW INVESTMENT (Money OUT, Stock IN)
-  async createInvestment(data: { name: string; quantity: number; totalCost: number; userId: string }) {
-    const { name, quantity, totalCost, userId } = data;
+  async createInvestment(data: { name: string; category?: string; quantity: number; totalCost: number; userId: string }) {
+    const { name, category = 'General', quantity, totalCost, userId } = data;
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -51,6 +51,7 @@ export class InvestmentsService {
       
       const investment = this.investmentRepository.create({
           name,
+          category,
           totalCost,
           unitCost,
           initialQuantity: quantity,

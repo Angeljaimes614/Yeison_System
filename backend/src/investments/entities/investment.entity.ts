@@ -10,6 +10,9 @@ export class Investment {
   @Column()
   name: string; // Ej: "Celular Samsung A54" (Antes 'concept')
 
+  @Column({ default: 'General' })
+  category: string; // Ej: "Celulares", "Billares"
+
   @Column('decimal', { precision: 16, scale: 2 })
   totalCost: number; // Costo Total de la Inversión (Sale de Caja)
 

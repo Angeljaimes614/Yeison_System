@@ -7,7 +7,7 @@ export class InvestmentsController {
 
   // 1. Create New Investment (Product)
   @Post()
-  create(@Body() dto: { name: string; quantity: number; totalCost: number; userId: string }) {
+  create(@Body() dto: { name: string; category?: string; quantity: number; totalCost: number; userId: string }) {
     return this.investmentsService.createInvestment(dto);
   }
 
