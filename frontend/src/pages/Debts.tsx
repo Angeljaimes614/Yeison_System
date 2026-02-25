@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { salesService, purchasesService, paymentsService } from '../api/services';
-import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock } from 'lucide-react';
+import { salesService, purchasesService, paymentsService, oldDebtsService } from '../api/services';
+import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock, PlusCircle } from 'lucide-react';
 
 const Debts = () => {
   const { user } = useAuth();
@@ -10,6 +10,12 @@ const Debts = () => {
   const [payables, setPayables] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Old Debt Modal
+  const [showOldDebtModal, setShowOldDebtModal] = useState(false);
+  const [clientName, setClientName] = useState('');
+  const [description, setDescription] = useState('');
+  const [totalAmount, setTotalAmount] = useState('');
+
   useEffect(() => {
     loadData();
   }, [user]);
@@ -17,21 +23,44 @@ const Debts = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [salesRes, purchasesRes] = await Promise.all([
+      const [salesRes, purchasesRes, oldDebtsRes] = await Promise.all([
         salesService.findAll(),
-        purchasesService.findAll()
+        purchasesService.findAll(),
+        oldDebtsService.findAll()
       ]);
 
-      // Filter Receivables (Sales with pending balance)
+      // 1. Process Sales (Receivables)
       const pendingSales = salesRes.data
         .filter((s: any) => Number(s.pendingBalance) > 0)
+        .map((s: any) => ({ ...s, type: 'SALE' }));
+
+      // 2. Process Old Debts (Receivables)
+      const activeOldDebts = oldDebtsRes.data
+        .filter((d: any) => d.isActive && Number(d.pendingBalance) > 0)
+        .map((d: any) => ({
+            id: d.id,
+            date: d.createdAt,
+            client: { name: d.clientName }, // Adapt to match Sale structure
+            amount: 0, // No foreign currency
+            currency: { code: 'COP' },
+            rate: 0,
+            totalPesos: d.totalAmount,
+            pendingBalance: d.pendingBalance,
+            paidAmount: d.paidAmount,
+            type: 'OLD_DEBT',
+            description: d.description
+        }));
+
+      // Merge Receivables
+      const allReceivables = [...pendingSales, ...activeOldDebts]
         .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
       
-      setReceivables(pendingSales);
+      setReceivables(allReceivables);
 
-      // Filter Payables (Purchases with pending balance)
+      // 3. Process Purchases (Payables)
       const pendingPurchases = purchasesRes.data
         .filter((p: any) => Number(p.pendingBalance) > 0)
+        .map((p: any) => ({ ...p, type: 'PURCHASE' }))
         .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setPayables(pendingPurchases);
@@ -43,7 +72,27 @@ const Debts = () => {
     }
   };
 
-  const handlePayment = async (tx: any, type: 'SALE' | 'PURCHASE') => {
+  const handleCreateOldDebt = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+          await oldDebtsService.create({
+              clientName,
+              description,
+              totalAmount: Number(totalAmount),
+              userId: user?.id
+          });
+          alert('Deuda antigua registrada correctamente');
+          setShowOldDebtModal(false);
+          setClientName('');
+          setDescription('');
+          setTotalAmount('');
+          loadData();
+      } catch (error: any) {
+          alert('Error al registrar');
+      }
+  };
+
+  const handlePayment = async (tx: any) => {
       const amountStr = prompt(`Saldo pendiente: $${Number(tx.pendingBalance).toLocaleString()}\nIngrese monto a abonar:`);
       if (!amountStr) return;
       
@@ -59,14 +108,23 @@ const Debts = () => {
       }
 
       try {
-          await paymentsService.create({
-              date: new Date().toISOString(),
-              amount,
-              method: 'cash',
-              purchaseId: type === 'PURCHASE' ? tx.id : undefined,
-              saleId: type === 'SALE' ? tx.id : undefined,
-              createdById: user?.id
-          });
+          if (tx.type === 'OLD_DEBT') {
+              await oldDebtsService.registerPayment({
+                  debtId: tx.id,
+                  amount,
+                  userId: user?.id
+              });
+          } else {
+              // SALE or PURCHASE
+              await paymentsService.create({
+                  date: new Date().toISOString(),
+                  amount,
+                  method: 'cash',
+                  purchaseId: tx.type === 'PURCHASE' ? tx.id : undefined,
+                  saleId: tx.type === 'SALE' ? tx.id : undefined,
+                  createdById: user?.id
+              });
+          }
           alert('Abono registrado correctamente');
           loadData();
       } catch (error: any) {
@@ -75,14 +133,14 @@ const Debts = () => {
       }
   };
 
-  const renderTable = (transactions: any[], type: 'SALE' | 'PURCHASE') => (
+  const renderTable = (transactions: any[], isPayable: boolean) => (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-               {type === 'SALE' ? 'Cliente' : 'Proveedor'}
+               {isPayable ? 'Proveedor' : 'Cliente'}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Original</th>
@@ -95,8 +153,8 @@ const Debts = () => {
           {transactions.map((tx) => {
              const total = Number(tx.totalPesos);
              const pending = Number(tx.pendingBalance);
-             const paid = total - pending;
-             const progress = (paid / total) * 100;
+             const paid = total - pending; // or use tx.paidAmount
+             const progress = total > 0 ? (paid / total) * 100 : 0;
 
              return (
               <tr key={tx.id}>
@@ -104,16 +162,21 @@ const Debts = () => {
                   {new Date(tx.date).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {type === 'SALE' ? (tx.client?.name || 'Cliente General') : (tx.provider?.name || 'Proveedor General')}
+                  {isPayable ? (tx.provider?.name || 'Proveedor General') : (tx.client?.name || tx.clientName || 'Cliente General')}
+                  {tx.type === 'OLD_DEBT' && <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">Antigua</span>}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                   {Number(tx.amount).toLocaleString()} {tx.currency?.code} @ {Number(tx.rate).toLocaleString()}
+                   {tx.type === 'OLD_DEBT' ? (
+                       <span className="italic">{tx.description || 'Deuda Antigua'}</span>
+                   ) : (
+                       `${Number(tx.amount).toLocaleString()} ${tx.currency?.code} @ ${Number(tx.rate).toLocaleString()}`
+                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
                   $ {total.toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
-                  $ {paid.toLocaleString('es-CO')}
+                  $ {Number(tx.paidAmount || paid).toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-red-600 font-bold text-sm">$ {pending.toLocaleString('es-CO')}</span>
@@ -123,7 +186,7 @@ const Debts = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <button
-                    onClick={() => handlePayment(tx, type)}
+                    onClick={() => handlePayment(tx)}
                     className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none"
                   >
                     <Wallet className="h-3 w-3 mr-1" />
@@ -148,12 +211,24 @@ const Debts = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-          <Clock className="mr-2 text-blue-600" />
-          Cartera y Deudas (Divisas)
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">Gestiona las cuentas por cobrar y por pagar de operaciones de divisas.</p>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center">
+            <Clock className="mr-2 text-blue-600" />
+            Cartera y Deudas (Divisas)
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">Gestiona las cuentas por cobrar y por pagar de operaciones de divisas.</p>
+        </div>
+        
+        {activeTab === 'receivable' && (
+            <button 
+                onClick={() => setShowOldDebtModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center shadow"
+            >
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Registrar Deuda Antigua
+            </button>
+        )}
       </div>
 
       <div className="flex space-x-4 mb-6">
@@ -196,7 +271,39 @@ const Debts = () => {
       {loading ? (
          <div className="text-center py-12">Cargando información financiera...</div>
       ) : (
-         activeTab === 'receivable' ? renderTable(receivables, 'SALE') : renderTable(payables, 'PURCHASE')
+         activeTab === 'receivable' ? renderTable(receivables, false) : renderTable(payables, true)
+      )}
+
+      {/* Modal Deuda Antigua */}
+      {showOldDebtModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Registrar Deuda Antigua</h2>
+            <p className="text-sm text-gray-500 mb-4">
+                Use esto para clientes que ya le debían dinero antes de usar este sistema. 
+                El dinero abonado a esta deuda entrará a la Caja Operativa.
+            </p>
+            <form onSubmit={handleCreateOldDebt}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                <input type="text" required className="w-full border rounded p-2 mt-1" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Ej: Juan Pérez" />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Descripción / Concepto</label>
+                <input type="text" required className="w-full border rounded p-2 mt-1" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ej: Saldo pendiente 2024" />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Monto Total de la Deuda</label>
+                <input type="number" required className="w-full border rounded p-2 mt-1" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="0" />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <button type="button" onClick={() => setShowOldDebtModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Registrar Deuda</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
