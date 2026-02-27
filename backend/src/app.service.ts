@@ -23,6 +23,7 @@ export class AppService {
       await queryRunner.query(`DELETE FROM "purchase"`);
       await queryRunner.query(`DELETE FROM "old_debt"`);
       await queryRunner.query(`DELETE FROM "cash_audit"`);
+      await queryRunner.query(`DELETE FROM "capital_movement"`);
       
       // Reset Inventory but keep currencies? Or delete currencies?
       // User said "Delete Everything". Let's keep Currencies as they are configuration.
