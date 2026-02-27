@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { capitalService, inventoryService } from '../api/services';
+import { capitalService, inventoryService, currenciesService } from '../api/services';
 import { DollarSign, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, Coins } from 'lucide-react';
 
 const Dashboard = () => {
@@ -9,32 +9,29 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [capital, setCapital] = useState<any>(null);
   const [inventory, setInventory] = useState<any[]>([]);
+  const [currencies, setCurrencies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      // 1. Force Fetch from Server (bypass potential local cache)
-      const capitalRes = await capitalService.findAll();
       
-      // 2. Log Raw Data
-      console.log('Raw Capital Response:', capitalRes.data);
+      const [capitalRes, inventoryRes, currenciesRes] = await Promise.all([
+        capitalService.findAll(),
+        inventoryService.findGlobal(),
+        currenciesService.findAll()
+      ]);
 
-      // Global Capital: Always use the first one as capital is shared across branches
-      // Ensure we treat it as an array and take the first one
+      // Process Capital
       const capitalList = Array.isArray(capitalRes.data) ? capitalRes.data : [capitalRes.data];
       const userCapital = capitalList[0] || null;
-      
-      // 3. Force State Update with new object reference
-      setCapital({...userCapital}); 
-      console.log('Set Capital State:', userCapital);
+      setCapital({...userCapital});
 
-      // Fetch Global Inventory
-      const inventoryRes = await inventoryService.findGlobal();
-      
-      // Global Inventory is already aggregated
+      // Process Inventory & Currencies
       setInventory(inventoryRes.data);
+      setCurrencies(currenciesRes.data);
+      
       setLastUpdated(new Date());
 
     } catch (error) {
@@ -61,13 +58,7 @@ const Dashboard = () => {
 
   // Calculate totals by currency from GlobalInventory
   const inventoryByCurrency = inventory.reduce((acc: any, item: any) => {
-    // GlobalInventory has currencyId and totalQuantity.
-    // We need to match currencyId to Code.
-    // Or, check if GlobalInventory response includes 'currency' relation.
-    // Assuming backend returns: { currencyId: '...', totalQuantity: '...', currency: { code: 'USD' } }
-    
     const currencyCode = item.currency?.code;
-    
     if (currencyCode) {
         if (!acc[currencyCode]) {
           acc[currencyCode] = 0;
@@ -77,15 +68,23 @@ const Dashboard = () => {
     return acc;
   }, {});
 
-  // Define display list
-  const displayCurrencies = [
+  // Define static cards
+  const staticCards = [
     { code: 'COP', label: 'Caja Operativa (COP)', value: Number(capital?.operativePlante || 0), icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50' },
     { code: 'PROFIT', label: 'Utilidad Neta Real', value: Number(capital?.accumulatedProfit || 0), icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-    { code: 'DÓLAR', label: 'Inventario DÓLAR', value: inventoryByCurrency['DÓLAR'] || 0, icon: DollarSign, color: 'text-gray-600', bg: 'bg-gray-50' },
-    { code: 'USDT', label: 'Inventario USDT', value: inventoryByCurrency['USDT'] || 0, icon: Coins, color: 'text-teal-600', bg: 'bg-teal-50' },
-    { code: 'EURO', label: 'Inventario EURO', value: inventoryByCurrency['EURO'] || 0, icon: Coins, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { code: 'BS', label: 'Inventario BS', value: inventoryByCurrency['BS'] || 0, icon: Coins, color: 'text-yellow-600', bg: 'bg-yellow-50' },
   ];
+
+  // Map dynamic currencies
+  const currencyCards = currencies.map((curr: any) => ({
+      code: curr.code,
+      label: `Inventario ${curr.code}`,
+      value: inventoryByCurrency[curr.code] || 0,
+      icon: ['USD', 'DÓLAR', 'USDT'].includes(curr.code) ? DollarSign : Coins,
+      color: 'text-gray-600',
+      bg: 'bg-gray-50'
+  }));
+
+  const displayCurrencies = [...staticCards, ...currencyCards];
 
   return (
     <div className="space-y-6">
