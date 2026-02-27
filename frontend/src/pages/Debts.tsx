@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { salesService, purchasesService, paymentsService, oldDebtsService } from '../api/services';
-import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock, PlusCircle } from 'lucide-react';
+import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock, PlusCircle, History, RotateCcw } from 'lucide-react';
 
 const Debts = () => {
   const { user } = useAuth();
@@ -15,6 +15,11 @@ const Debts = () => {
   const [clientName, setClientName] = useState('');
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
+
+  // History Modal
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [debtPayments, setDebtPayments] = useState<any[]>([]);
+  const [selectedDebt, setSelectedDebt] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -133,6 +138,34 @@ const Debts = () => {
       }
   };
 
+  const handleOpenHistory = async (tx: any) => {
+      setSelectedDebt(tx);
+      try {
+          const type = tx.type === 'SALE' ? 'sale' : tx.type === 'PURCHASE' ? 'purchase' : 'old-debt';
+          const res = await paymentsService.findByTransaction(type, tx.id);
+          setDebtPayments(res.data);
+          setShowHistoryModal(true);
+      } catch (error) {
+          console.error(error);
+          alert('Error al cargar historial');
+      }
+  };
+
+  const handleReversePayment = async (paymentId: string) => {
+      if (!window.confirm('¿Anular este abono? El dinero saldrá de la caja y la deuda aumentará.')) return;
+      try {
+          await paymentsService.reverse(paymentId, user?.id || '');
+          alert('Abono anulado');
+          // Reload payments
+          const type = selectedDebt.type === 'SALE' ? 'sale' : selectedDebt.type === 'PURCHASE' ? 'purchase' : 'old-debt';
+          const res = await paymentsService.findByTransaction(type, selectedDebt.id);
+          setDebtPayments(res.data);
+          loadData(); // Reload main table
+      } catch (error: any) {
+          alert(error.response?.data?.message || 'Error al anular');
+      }
+  };
+
   const renderTable = (transactions: any[], isPayable: boolean) => (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <table className="min-w-full divide-y divide-gray-200">
@@ -184,13 +217,20 @@ const Debts = () => {
                     <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
+                <td className="px-6 py-4 whitespace-nowrap text-right flex justify-end gap-2">
                   <button
                     onClick={() => handlePayment(tx)}
                     className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none"
                   >
                     <Wallet className="h-3 w-3 mr-1" />
                     Abonar
+                  </button>
+                  <button
+                    onClick={() => handleOpenHistory(tx)}
+                    className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                    title="Ver Historial de Abonos"
+                  >
+                    <History className="h-3 w-3" />
                   </button>
                 </td>
               </tr>
@@ -302,6 +342,64 @@ const Debts = () => {
                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Registrar Deuda</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Historial Abonos */}
+      {showHistoryModal && selectedDebt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Historial de Abonos</h2>
+                <button onClick={() => setShowHistoryModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            
+            <div className="mb-4 text-sm text-gray-600">
+                <p><strong>Cliente/Proveedor:</strong> {activeTab === 'receivable' ? (selectedDebt.client?.name || selectedDebt.clientName) : (selectedDebt.provider?.name)}</p>
+                <p><strong>Total Deuda:</strong> $ {Number(selectedDebt.totalPesos).toLocaleString()}</p>
+                <p><strong>Saldo Pendiente:</strong> $ {Number(selectedDebt.pendingBalance).toLocaleString()}</p>
+            </div>
+
+            <table className="min-w-full divide-y divide-gray-200">
+               <thead className="bg-gray-50">
+                  <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Fecha</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Monto Abonado</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Usuario</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Acción</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-gray-200">
+                  {debtPayments.map(p => (
+                      <tr key={p.id} className={p.isReversed ? 'bg-red-50' : ''}>
+                          <td className="px-4 py-2 text-sm">
+                              {new Date(p.date).toLocaleDateString()} {new Date(p.date).toLocaleTimeString()}
+                              {p.isReversed && <span className="block text-xs text-red-600 font-bold">ANULADO</span>}
+                          </td>
+                          <td className={`px-4 py-2 text-sm font-bold ${p.isReversed ? 'line-through text-gray-400' : 'text-green-600'}`}>
+                              $ {Number(p.amount).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-500">
+                              {p.createdBy?.username || 'Sistema'}
+                          </td>
+                          <td className="px-4 py-2 text-right text-sm">
+                              {!p.isReversed && (
+                                  <button 
+                                      onClick={() => handleReversePayment(p.id)}
+                                      className="text-red-500 hover:text-red-700 flex items-center justify-end w-full gap-1"
+                                  >
+                                      <RotateCcw className="h-3 w-3" /> Anular
+                                  </button>
+                              )}
+                          </td>
+                      </tr>
+                  ))}
+                  {debtPayments.length === 0 && (
+                      <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">No hay abonos registrados.</td></tr>
+                  )}
+               </tbody>
+            </table>
           </div>
         </div>
       )}

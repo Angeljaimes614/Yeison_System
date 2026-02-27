@@ -68,6 +68,7 @@ export const expensesService = {
 export const paymentsService = {
   create: (data: any) => api.post('/payments', data),
   reverse: (id: string, userId: string) => api.post(`/payments/${id}/reverse`, { userId }),
+  findByTransaction: (type: string, id: string) => api.get(`/payments/transaction/${type}/${id}`),
   findAll: () => api.get('/payments'),
 };
 
