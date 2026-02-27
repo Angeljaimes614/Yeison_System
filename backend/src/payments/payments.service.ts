@@ -6,6 +6,7 @@ import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { Payment } from './entities/payment.entity';
 import { Purchase } from '../purchases/entities/purchase.entity';
 import { Sale } from '../sales/entities/sale.entity';
+import { OldDebt } from '../old-debts/entities/old-debt.entity';
 import { Capital } from '../capital/entities/capital.entity';
 
 @Injectable()
@@ -101,6 +102,85 @@ export class PaymentsService {
 
       await queryRunner.commitTransaction();
       return savedPayment;
+
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // REVERSE PAYMENT
+  async reverse(paymentId: string, userId: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const payment = await queryRunner.manager.findOne(Payment, { where: { id: paymentId } });
+      if (!payment) throw new NotFoundException('Payment not found');
+      if (payment.isReversed) throw new BadRequestException('Payment already reversed');
+
+      const amount = Number(payment.amount);
+
+      // Get Capital
+      const capitals = await queryRunner.manager.find(Capital);
+      const capital = capitals[0]; // Assume initialized
+
+      if (payment.purchaseId) {
+          // Reversing a payment to provider (We get money back)
+          const purchase = await queryRunner.manager.findOne(Purchase, { where: { id: payment.purchaseId } });
+          if (purchase) {
+              purchase.paidAmount = Number(purchase.paidAmount) - amount;
+              purchase.pendingBalance = Number(purchase.pendingBalance) + amount;
+              purchase.status = 'pending'; // Re-open
+              await queryRunner.manager.save(purchase);
+          }
+          // Add money back to Capital
+          capital.operativePlante = Number(capital.operativePlante) + amount;
+
+      } else if (payment.saleId) {
+          // Reversing a payment from client (We give money back)
+          const sale = await queryRunner.manager.findOne(Sale, { where: { id: payment.saleId } });
+          if (sale) {
+              sale.paidAmount = Number(sale.paidAmount) - amount;
+              sale.pendingBalance = Number(sale.pendingBalance) + amount;
+              sale.status = 'pending'; // Re-open
+              await queryRunner.manager.save(sale);
+          }
+          // Remove money from Capital
+          if (Number(capital.operativePlante) < amount) {
+              throw new BadRequestException('Fondos insuficientes para devolver este pago');
+          }
+          capital.operativePlante = Number(capital.operativePlante) - amount;
+
+      } else if (payment.oldDebtId) {
+          // Reversing a payment to old debt (We give money back)
+          const oldDebt = await queryRunner.manager.findOne(OldDebt, { where: { id: payment.oldDebtId } });
+          if (oldDebt) {
+              oldDebt.paidAmount = Number(oldDebt.paidAmount) - amount;
+              oldDebt.pendingBalance = Number(oldDebt.pendingBalance) + amount;
+              oldDebt.isActive = true; // Re-activate
+              await queryRunner.manager.save(oldDebt);
+          }
+          // Remove money from Capital
+          if (Number(capital.operativePlante) < amount) {
+              throw new BadRequestException('Fondos insuficientes para devolver este pago');
+          }
+          capital.operativePlante = Number(capital.operativePlante) - amount;
+      }
+
+      await queryRunner.manager.save(capital);
+
+      // Mark as reversed
+      payment.isReversed = true;
+      payment.reversedAt = new Date();
+      payment.reversedBy = userId;
+      await queryRunner.manager.save(payment);
+
+      await queryRunner.commitTransaction();
+      return payment;
 
     } catch (err) {
       await queryRunner.rollbackTransaction();

@@ -12,6 +12,11 @@ export class PaymentsController {
     return this.paymentsService.create(createPaymentDto);
   }
 
+  @Post(':id/reverse')
+  reverse(@Param('id') id: string, @Body() body: { userId: string }) {
+    return this.paymentsService.reverse(id, body.userId);
+  }
+
   @Get()
   findAll() {
     return this.paymentsService.findAll();

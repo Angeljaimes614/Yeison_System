@@ -48,6 +48,12 @@ export class Exchange {
   @JoinColumn({ name: 'createdById' })
   createdBy: User;
 
+  @Column({ default: false })
+  isReversed: boolean;
+
+  @Column({ nullable: true })
+  reversedAt: Date;
+
   @CreateDateColumn()
   date: Date;
 }

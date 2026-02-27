@@ -32,6 +32,18 @@ export class Payment {
   sale: Sale;
 
   @Column({ nullable: true })
+  oldDebtId: string;
+
+  @Column({ default: false })
+  isReversed: boolean;
+
+  @Column({ nullable: true })
+  reversedAt: Date;
+
+  @Column({ nullable: true })
+  reversedBy: string;
+
+  @Column({ nullable: true })
   createdById: string;
 
   @ManyToOne(() => User)

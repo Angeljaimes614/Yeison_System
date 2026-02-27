@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { OldDebt } from './entities/old-debt.entity';
 import { Capital } from '../capital/entities/capital.entity';
+import { Payment } from '../payments/entities/payment.entity';
 
 @Injectable()
 export class OldDebtsService {
@@ -70,6 +71,16 @@ export class OldDebtsService {
         // For simplicity, we just add to Cash Flow (Operative Plante).
         
         await queryRunner.manager.save(capital);
+
+        // Create Payment Record
+        const payment = queryRunner.manager.create(Payment, {
+            date: new Date(),
+            amount: amount,
+            method: 'cash',
+            oldDebtId: debt.id,
+            createdById: userId
+        });
+        await queryRunner.manager.save(payment);
 
         await queryRunner.commitTransaction();
         return debt;

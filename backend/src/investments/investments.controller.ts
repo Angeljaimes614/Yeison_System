@@ -29,6 +29,12 @@ export class InvestmentsController {
     return this.investmentsService.remove(id);
   }
 
+  // 5. Reverse Sale
+  @Post('transaction/:id/reverse')
+  reverseSale(@Param('id') id: string, @Body() body: { userId: string }) {
+    return this.investmentsService.reverseSale(id, body.userId);
+  }
+
   @Get()
   findAll() {
     return this.investmentsService.findAll();

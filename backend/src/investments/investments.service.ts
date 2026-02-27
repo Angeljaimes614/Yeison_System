@@ -209,6 +209,58 @@ export class InvestmentsService {
       }
   }
 
+  // 5. REVERSE SALE
+  async reverseSale(transactionId: string, userId: string) {
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+          const transaction = await queryRunner.manager.findOne(InvestmentTransaction, { 
+              where: { id: transactionId },
+              relations: ['investment']
+          });
+          
+          if (!transaction) throw new NotFoundException('Venta no encontrada');
+          if (transaction.isReversed) throw new BadRequestException('Venta ya anulada');
+
+          const investment = transaction.investment;
+          if (!investment) throw new NotFoundException('Producto asociado no encontrado');
+
+          // 1. Restore Stock
+          investment.currentQuantity = Number(investment.currentQuantity) + Number(transaction.quantity);
+          if (investment.currentQuantity > 0) investment.status = 'ACTIVE';
+          await queryRunner.manager.save(investment);
+
+          // 2. Reverse Capital (Money Out, Profit Out)
+          const capitals = await queryRunner.manager.find(Capital);
+          const capital = capitals[0];
+
+          // Check if we have enough cash to return to customer
+          if (Number(capital.operativePlante) < Number(transaction.salePrice)) {
+              throw new BadRequestException('Fondos insuficientes en caja para devolver esta venta');
+          }
+
+          capital.operativePlante = Number(capital.operativePlante) - Number(transaction.salePrice);
+          capital.accumulatedProfit = Number(capital.accumulatedProfit) - Number(transaction.profit);
+          await queryRunner.manager.save(capital);
+
+          // 3. Mark as Reversed
+          transaction.isReversed = true;
+          transaction.reversedAt = new Date();
+          await queryRunner.manager.save(transaction);
+
+          await queryRunner.commitTransaction();
+          return transaction;
+
+      } catch (err) {
+          await queryRunner.rollbackTransaction();
+          throw err;
+      } finally {
+          await queryRunner.release();
+      }
+  }
+
   findAll() {
     return this.investmentRepository.find({
         relations: ['createdBy'],

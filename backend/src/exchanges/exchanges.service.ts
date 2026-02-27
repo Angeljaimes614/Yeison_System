@@ -1,7 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Exchange } from './entities/exchange.entity';
+import { GlobalInventory } from '../inventory/entities/global-inventory.entity';
 import { InventoryService } from '../inventory/inventory.service';
 
 import { User } from '../users/entities/user.entity';
@@ -62,6 +63,64 @@ export class ExchangesService {
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  // REVERSE EXCHANGE
+  async reverse(exchangeId: string, userId: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+        const exchange = await queryRunner.manager.findOne(Exchange, { where: { id: exchangeId } });
+        if (!exchange) throw new NotFoundException('Intercambio no encontrado');
+        if (exchange.isReversed) throw new BadRequestException('Intercambio ya anulado');
+
+        // 1. Restore Source Currency (Add Quantity & Cost back)
+        const sourceInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId: exchange.sourceCurrencyId } });
+        if (sourceInv) {
+            sourceInv.totalQuantity = Number(sourceInv.totalQuantity) + Number(exchange.sourceAmount);
+            sourceInv.totalCostCOP = Number(sourceInv.totalCostCOP) + Number(exchange.costTransferredCOP);
+            // Recalculate Average
+            if (sourceInv.totalQuantity > 0) {
+                sourceInv.averageCost = Number(sourceInv.totalCostCOP) / Number(sourceInv.totalQuantity);
+            }
+            await queryRunner.manager.save(sourceInv);
+        }
+
+        // 2. Deduct Target Currency (Remove Quantity & Cost)
+        const targetInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId: exchange.targetCurrencyId } });
+        if (targetInv) {
+            if (Number(targetInv.totalQuantity) < Number(exchange.targetAmount)) {
+                throw new BadRequestException('Saldo insuficiente en moneda destino para revertir');
+            }
+            targetInv.totalQuantity = Number(targetInv.totalQuantity) - Number(exchange.targetAmount);
+            targetInv.totalCostCOP = Number(targetInv.totalCostCOP) - Number(exchange.costTransferredCOP);
+             
+             if (targetInv.totalQuantity > 0) {
+                targetInv.averageCost = Number(targetInv.totalCostCOP) / Number(targetInv.totalQuantity);
+            } else {
+                targetInv.totalQuantity = 0;
+                targetInv.totalCostCOP = 0;
+                targetInv.averageCost = 0;
+            }
+            await queryRunner.manager.save(targetInv);
+        }
+
+        // 3. Mark as Reversed
+        exchange.isReversed = true;
+        exchange.reversedAt = new Date();
+        await queryRunner.manager.save(exchange);
+
+        await queryRunner.commitTransaction();
+        return exchange;
+
+    } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+    } finally {
+        await queryRunner.release();
     }
   }
 
