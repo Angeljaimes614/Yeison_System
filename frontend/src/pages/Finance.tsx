@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { capitalService, inventoryService } from '../api/services';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, Activity, ArrowUpCircle, ArrowDownCircle, PieChart } from 'lucide-react';
+import { capitalService, inventoryService, investmentsService } from '../api/services';
+import { Wallet, TrendingUp, DollarSign, Activity, PieChart, ArrowUpRight, ArrowDownRight, CreditCard } from 'lucide-react';
 
 const Finance = () => {
   const { user } = useAuth();
@@ -21,28 +21,34 @@ const Finance = () => {
 
   const loadData = async () => {
     try {
-      const [capRes, invRes, movRes] = await Promise.all([
+      const [capRes, invRes, prodRes, movRes] = await Promise.all([
         capitalService.findAll(),
-        inventoryService.findAll(),
+        inventoryService.findGlobal(), // Use Global Inventory for currencies
+        investmentsService.findAll(),  // Products (Cellphones, etc)
         capitalService.getMovements()
       ]);
 
-      // Capital
-      const userCapital = capRes.data[0] || null;
-      setCapital(userCapital);
+      // 1. Capital
+      const userCapital = Array.isArray(capRes.data) ? capRes.data[0] : capRes.data;
+      setCapital(userCapital || { operativePlante: 0, accumulatedProfit: 0 });
 
-      // Inventory Value Calculation (Approximate based on purchase rate if available, or just sum of amounts for now? 
-      // User asked for "Valor Total del Inventario". We need avg cost per currency.
-      // For now, let's sum the 'originalAmount' * 'purchaseRate' of active items, or simpler:
-      // Since backend doesn't give us total value directly, we might need to estimate or update backend later.
-      // Let's assume for now we just show the cash capital and profit.
-      // Wait, user said: "Valor Total del Inventario". 
-      // Let's iterate inventory and sum (balance * purchaseRate).
-      const invVal = invRes.data.reduce((acc: number, item: any) => {
-        return acc + (Number(item.currentBalance) * Number(item.purchaseRate));
+      // 2. Inventory Value Calculation
+      // A. Currencies Value (COP Cost)
+      const currencyValue = invRes.data.reduce((acc: number, item: any) => {
+        return acc + Number(item.totalCostCOP || 0);
       }, 0);
-      setInventoryValue(invVal);
 
+      // B. Products Value (Stock * Unit Cost)
+      const productValue = prodRes.data.reduce((acc: number, item: any) => {
+          if (item.status === 'ACTIVE') {
+              return acc + (Number(item.currentQuantity) * Number(item.unitCost));
+          }
+          return acc;
+      }, 0);
+
+      setInventoryValue(currencyValue + productValue);
+
+      // 3. Movements
       setMovements(movRes.data);
 
     } catch (error) {
@@ -57,31 +63,15 @@ const Finance = () => {
     if (!amount || !description) return;
 
     try {
-      let type: 'INJECTION' | 'WITHDRAWAL_PROFIT' | 'WITHDRAWAL_CAPITAL' = 'INJECTION'; // Default
+      let type: 'INJECTION' | 'WITHDRAWAL_PROFIT' | 'WITHDRAWAL_CAPITAL' = 'INJECTION';
       
-      // Map tab to type
       if (activeTab === 'expense') {
-        // We handle expenses as "WITHDRAWAL_PROFIT" internally if it's an expense that reduces profit?
-        // No, expenses are expenses. But user wanted unified module.
-        // Let's use 'WITHDRAWAL_PROFIT' for expenses effectively since they reduce profit?
-        // Actually, let's map:
-        // Gasto Operativo -> WITHDRAWAL_PROFIT (Reduces Cash & Profit) - Wait, is this semantically correct?
-        // User said: "Gasto Operativo: Baja capital, Reduce utilidad".
-        // Withdrawal Profit: "Baja capital, Baja utilidad".
-        // They are mathematically the same in our simple model.
-        // But for clarity, maybe we should have added 'EXPENSE' type to backend.
-        // For now, let's use 'WITHDRAWAL_PROFIT' but clearly label it in description.
-        // OR better: The backend `registerMovement` supports INJECTION, WITHDRAWAL_PROFIT, WITHDRAWAL_CAPITAL.
-        // Let's use WITHDRAWAL_PROFIT for expenses for now as it fits the math.
-        type = 'WITHDRAWAL_PROFIT'; 
+        type = 'WITHDRAWAL_PROFIT'; // Expense reduces profit
       } else if (activeTab === 'injection') {
         type = 'INJECTION';
       } else if (activeTab === 'withdrawal') {
         type = 'WITHDRAWAL_PROFIT'; // Profit withdrawal
       }
-
-      // If it's a "Capital Withdrawal" (reducing equity, not profit), we'd use WITHDRAWAL_CAPITAL.
-      // But user asked for "Retirar Utilidad".
 
       await capitalService.registerMovement({
         type,
@@ -181,27 +171,27 @@ const Finance = () => {
         <div className="flex border-b">
           <button
             onClick={() => setActiveTab('expense')}
-            className={`flex-1 py-4 text-center font-medium transition-colors ${
+            className={`flex-1 py-4 text-center font-medium transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'expense' ? 'bg-red-50 text-red-600 border-b-2 border-red-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Registrar Gasto Operativo
+            <ArrowDownRight className="h-4 w-4" /> Registrar Gasto Operativo
           </button>
           <button
             onClick={() => setActiveTab('injection')}
-            className={`flex-1 py-4 text-center font-medium transition-colors ${
+            className={`flex-1 py-4 text-center font-medium transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'injection' ? 'bg-green-50 text-green-600 border-b-2 border-green-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Inyectar Capital
+            <ArrowUpRight className="h-4 w-4" /> Inyectar Capital
           </button>
           <button
             onClick={() => setActiveTab('withdrawal')}
-            className={`flex-1 py-4 text-center font-medium transition-colors ${
+            className={`flex-1 py-4 text-center font-medium transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'withdrawal' ? 'bg-orange-50 text-orange-600 border-b-2 border-orange-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Retirar Utilidad
+            <CreditCard className="h-4 w-4" /> Retirar Utilidad
           </button>
         </div>
 
@@ -216,7 +206,7 @@ const Finance = () => {
                 type="text"
                 required
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Ej: Pago de arriendo, Inversión socio..."
+                placeholder={activeTab === 'expense' ? 'Ej: Pago de arriendo' : activeTab === 'injection' ? 'Ej: Inversión socio' : 'Ej: Retiro personal'}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -296,7 +286,7 @@ const Finance = () => {
                     {mov.type === 'INJECTION' ? '+' : '-'} $ {Number(mov.amount).toLocaleString('es-CO')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {mov.createdBy?.fullName || 'Sistema'}
+                    {mov.createdBy?.username || 'Sistema'}
                   </td>
                 </tr>
               ))}
