@@ -34,7 +34,7 @@ const Layout = () => {
     { name: 'Cartera (Deudas)', path: '/debts', icon: Clock },
     { name: 'Inversiones', path: '/investments', icon: TrendingUp },
     { name: 'Configuración', path: '/settings', icon: SettingsIcon },
-    { name: 'Gestión Financiera', path: '/finance', icon: Wallet },
+    { name: 'Balance Financiero YM', path: '/finance', icon: Wallet },
     { name: 'Reportes', path: '/reports', icon: FileText },
     // Only show Users menu to admins
     ...(user?.role === 'admin' ? [{ name: 'Usuarios', path: '/users', icon: Users }] : []),
@@ -45,7 +45,7 @@ const Layout = () => {
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex md:flex-col w-64 bg-slate-900 text-white transition-all duration-300">
         <div className="p-4 bg-slate-800 flex items-center justify-center">
-          <h1 className="text-xl font-bold tracking-wider">ERP SYSTEM</h1>
+          <h1 className="text-xl font-bold tracking-wider">SISTEMA YM</h1>
         </div>
         
         <nav className="flex-1 overflow-y-auto py-4">
@@ -101,7 +101,7 @@ const Layout = () => {
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex justify-between items-center p-4 bg-slate-800">
-          <h1 className="text-xl font-bold">ERP SYSTEM</h1>
+          <h1 className="text-xl font-bold">SISTEMA YM</h1>
           <button onClick={() => setIsMobileMenuOpen(false)} className="text-white">
             <X className="h-6 w-6" />
           </button>
@@ -145,7 +145,7 @@ const Layout = () => {
           <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-600">
             <Menu className="h-6 w-6" />
           </button>
-          <span className="font-semibold text-gray-800">ERP System</span>
+          <span className="font-semibold text-gray-800">SISTEMA YM</span>
           <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
              {user?.username.charAt(0).toUpperCase()}
           </div>
