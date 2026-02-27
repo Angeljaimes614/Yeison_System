@@ -13,7 +13,8 @@ import {
   X,
   Users,
   TrendingUp,
-  Clock
+  Clock,
+  Settings as SettingsIcon
 } from 'lucide-react';
 
 const Layout = () => {
@@ -32,6 +33,7 @@ const Layout = () => {
     { name: 'Operaciones', path: '/operations', icon: ArrowRightLeft },
     { name: 'Cartera (Deudas)', path: '/debts', icon: Clock },
     { name: 'Inversiones', path: '/investments', icon: TrendingUp },
+    { name: 'Configuración', path: '/settings', icon: SettingsIcon },
     { name: 'Gestión Financiera', path: '/finance', icon: Wallet },
     { name: 'Reportes', path: '/reports', icon: FileText },
     // Only show Users menu to admins
