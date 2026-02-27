@@ -141,6 +141,20 @@ const Investments = () => {
       }
   };
 
+  const handleReverseSale = async (tx: any) => {
+      if (!window.confirm('¿Estás seguro de anular esta venta? Se devolverá el dinero y el stock.')) return;
+      try {
+          await investmentsService.reverseSale(tx.id, user?.id || '');
+          alert('Venta anulada correctamente');
+          // Reload transactions
+          const res = await investmentsService.findTransactions(selectedInvestment.id);
+          setTransactions(res.data);
+          loadData(); // Reload stock
+      } catch (error: any) {
+          alert(error.response?.data?.message || 'Error al anular');
+      }
+  };
+
   const openSellModal = (inv: any) => {
     setSelectedInvestment(inv);
     setShowSellModal(true);
@@ -398,15 +412,33 @@ const Investments = () => {
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Cant.</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Venta</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Utilidad</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Acción</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-200">
                   {transactions.map(tx => (
-                      <tr key={tx.id}>
-                          <td className="px-4 py-2 text-sm">{new Date(tx.date).toLocaleDateString()}</td>
+                      <tr key={tx.id} className={tx.isReversed ? 'bg-red-50' : ''}>
+                          <td className="px-4 py-2 text-sm">
+                              {new Date(tx.date).toLocaleDateString()}
+                              {tx.isReversed && <span className="block text-xs text-red-600 font-bold">ANULADA</span>}
+                          </td>
                           <td className="px-4 py-2 text-sm">{tx.quantity}</td>
-                          <td className="px-4 py-2 text-sm font-bold">$ {Number(tx.salePrice).toLocaleString()}</td>
-                          <td className="px-4 py-2 text-sm text-green-600 font-bold">$ {Number(tx.profit).toLocaleString()}</td>
+                          <td className={`px-4 py-2 text-sm font-bold ${tx.isReversed ? 'line-through text-gray-400' : ''}`}>
+                              $ {Number(tx.salePrice).toLocaleString()}
+                          </td>
+                          <td className={`px-4 py-2 text-sm font-bold ${tx.isReversed ? 'line-through text-gray-400' : 'text-green-600'}`}>
+                              $ {Number(tx.profit).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2 text-right text-sm">
+                              {!tx.isReversed && (
+                                  <button 
+                                      onClick={() => handleReverseSale(tx)}
+                                      className="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded"
+                                  >
+                                      Anular
+                                  </button>
+                              )}
+                          </td>
                       </tr>
                   ))}
                   {transactions.length === 0 && (

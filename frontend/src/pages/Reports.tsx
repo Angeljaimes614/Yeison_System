@@ -112,8 +112,10 @@ const Reports = () => {
     try {
       if (tx.type === 'COMPRA') {
         await purchasesService.reverse(tx.id, { userId: user?.id || '', reason });
-      } else {
+      } else if (tx.type === 'VENTA') {
         await salesService.reverse(tx.id, { userId: user?.id || '', reason });
+      } else if (tx.type === 'CONVERSIÓN') {
+        await exchangesService.reverse(tx.id, user?.id || '');
       }
       alert('Operación anulada correctamente.');
       loadTransactions();
@@ -285,9 +287,9 @@ const Reports = () => {
                    )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {tx.status !== 'reversed' && tx.type !== 'CONVERSIÓN' && (
+                  {tx.status !== 'reversed' && (
                     <div className="flex justify-end gap-2">
-                      {tx.pendingBalance > 0 && (
+                      {tx.pendingBalance > 0 && tx.type !== 'CONVERSIÓN' && (
                         <button
                           onClick={() => handlePayment(tx)}
                           className="text-green-600 hover:text-green-900 flex items-center text-xs border border-green-200 px-2 py-1 rounded hover:bg-green-50"

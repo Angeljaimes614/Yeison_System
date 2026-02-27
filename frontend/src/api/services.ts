@@ -31,6 +31,7 @@ export const inventoryService = {
 export const exchangesService = {
   findAll: () => api.get('/exchanges'),
   create: (data: any) => api.post('/exchanges', data),
+  reverse: (id: string, userId: string) => api.post(`/exchanges/${id}/reverse`, { userId }),
 };
 
 export const salesService = {
@@ -66,6 +67,7 @@ export const expensesService = {
 
 export const paymentsService = {
   create: (data: any) => api.post('/payments', data),
+  reverse: (id: string, userId: string) => api.post(`/payments/${id}/reverse`, { userId }),
   findAll: () => api.get('/payments'),
 };
 
@@ -80,6 +82,7 @@ export const investmentsService = {
   sell: (data: any) => api.post('/investments/sell', data),
   restock: (data: any) => api.post('/investments/restock', data),
   remove: (id: string) => api.delete(`/investments/${id}`),
+  reverseSale: (id: string, userId: string) => api.post(`/investments/transaction/${id}/reverse`, { userId }),
   findAll: () => api.get('/investments'),
   findTransactions: (id: string) => api.get(`/investments/${id}/transactions`),
 };
