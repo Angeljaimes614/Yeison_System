@@ -190,6 +190,19 @@ export class PaymentsService {
     }
   }
 
+  async findByTransaction(type: 'sale' | 'purchase' | 'old-debt', id: string) {
+      const where: any = {};
+      if (type === 'sale') where.saleId = id;
+      else if (type === 'purchase') where.purchaseId = id;
+      else if (type === 'old-debt') where.oldDebtId = id;
+
+      return this.paymentRepository.find({
+          where,
+          order: { date: 'DESC' },
+          relations: ['createdBy']
+      });
+  }
+
   findAll() {
     return this.paymentRepository.find({ relations: ['purchase', 'sale', 'createdBy'] });
   }

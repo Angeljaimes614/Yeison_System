@@ -17,6 +17,11 @@ export class PaymentsController {
     return this.paymentsService.reverse(id, body.userId);
   }
 
+  @Get('transaction/:type/:id')
+  findByTransaction(@Param('type') type: string, @Param('id') id: string) {
+      return this.paymentsService.findByTransaction(type as any, id);
+  }
+
   @Get()
   findAll() {
     return this.paymentsService.findAll();
