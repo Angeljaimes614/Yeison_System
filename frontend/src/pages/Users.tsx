@@ -217,6 +217,7 @@ const Users = () => {
                   <option value="cajero">Cajero</option>
                   <option value="supervisor">Supervisor</option>
                   <option value="admin">Administrador</option>
+                  <option value="inversionista">Inversionista</option>
                 </select>
               </div>
               <div>

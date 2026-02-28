@@ -28,17 +28,23 @@ const Layout = () => {
     navigate('/login');
   };
 
-  const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Operaciones', path: '/operations', icon: ArrowRightLeft },
-    { name: 'Cartera (Deudas)', path: '/debts', icon: Clock },
-    { name: 'Inversiones', path: '/investments', icon: TrendingUp },
-    { name: 'Configuración', path: '/settings', icon: SettingsIcon },
-    { name: 'Balance Financiero YM', path: '/finance', icon: Wallet },
-    { name: 'Reportes', path: '/reports', icon: FileText },
-    // Only show Users menu to admins
-    ...(user?.role === 'admin' ? [{ name: 'Usuarios', path: '/users', icon: Users }] : []),
+  // Define all possible items
+  const allNavItems = [
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'cajero'] },
+    { name: 'Operaciones', path: '/operations', icon: ArrowRightLeft, roles: ['admin', 'supervisor', 'cajero'] },
+    { name: 'Cartera (Deudas)', path: '/debts', icon: Clock, roles: ['admin', 'supervisor', 'cajero'] },
+    { name: 'Inversiones', path: '/investments', icon: TrendingUp, roles: ['admin', 'supervisor', 'cajero', 'inversionista'] },
+    { name: 'Configuración', path: '/settings', icon: SettingsIcon, roles: ['admin', 'supervisor', 'cajero'] },
+    { name: 'Balance Financiero YM', path: '/finance', icon: Wallet, roles: ['admin', 'supervisor', 'cajero'] },
+    { name: 'Reportes', path: '/reports', icon: FileText, roles: ['admin', 'supervisor', 'cajero'] },
+    { name: 'Usuarios', path: '/users', icon: Users, roles: ['admin'] },
   ];
+
+  // Filter based on user role
+  const navItems = allNavItems.filter(item => {
+      if (!user) return false;
+      return item.roles.includes(user.role);
+  });
 
   return (
     <div className="flex h-screen bg-gray-100">

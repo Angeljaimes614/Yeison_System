@@ -2,7 +2,7 @@ export interface User {
   id: string;
   username: string;
   fullName: string;
-  role: 'admin' | 'supervisor' | 'cajero';
+  role: 'admin' | 'supervisor' | 'cajero' | 'inversionista';
   branchId?: string;
 }
 

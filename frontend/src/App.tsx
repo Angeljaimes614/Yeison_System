@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Operations from './pages/Operations';
@@ -16,6 +16,32 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
+// Helper component for role-based access
+const RoleRoute = ({ children, roles }: { children: React.ReactNode, roles: string[] }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return <div>Cargando...</div>;
+  
+  if (user && !roles.includes(user.role)) {
+    // Redirect based on role if access denied
+    if (user.role === 'inversionista') return <Navigate to="/investments" replace />;
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Wrapper for the Home Route to redirect Investors
+const HomeRedirect = () => {
+    const { user, loading } = useAuth();
+    if (loading) return <div>Cargando...</div>;
+    
+    if (user?.role === 'inversionista') {
+        return <Navigate to="/investments" replace />;
+    }
+    return <Dashboard />;
+};
+
 function App() {
   return (
     <Router>
@@ -28,19 +54,50 @@ function App() {
               <Layout />
             </ProtectedRoute>
           }>
-            <Route index element={<Dashboard />} />
+            {/* Home Route with Redirection Logic */}
+            <Route index element={<HomeRedirect />} />
+            
             <Route path="operations" element={
-              <ErrorBoundary>
-                <Operations />
-              </ErrorBoundary>
+              <RoleRoute roles={['admin', 'supervisor', 'cajero']}>
+                <ErrorBoundary><Operations /></ErrorBoundary>
+              </RoleRoute>
             } />
-            {/* <Route path="inventory" element={<Inventory />} /> */}
-            <Route path="finance" element={<Finance />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="investments" element={<Investments />} />
-            <Route path="debts" element={<Debts />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="users" element={<Users />} />
+            
+            <Route path="finance" element={
+               <RoleRoute roles={['admin', 'supervisor', 'cajero']}>
+                 <Finance />
+               </RoleRoute>
+            } />
+            
+            <Route path="reports" element={
+               <RoleRoute roles={['admin', 'supervisor', 'cajero']}>
+                 <Reports />
+               </RoleRoute>
+            } />
+            
+            <Route path="investments" element={
+               <RoleRoute roles={['admin', 'supervisor', 'cajero', 'inversionista']}>
+                 <Investments />
+               </RoleRoute>
+            } />
+            
+            <Route path="debts" element={
+               <RoleRoute roles={['admin', 'supervisor', 'cajero']}>
+                 <Debts />
+               </RoleRoute>
+            } />
+            
+            <Route path="settings" element={
+               <RoleRoute roles={['admin', 'supervisor', 'cajero']}>
+                 <Settings />
+               </RoleRoute>
+            } />
+            
+            <Route path="users" element={
+               <RoleRoute roles={['admin']}>
+                 <Users />
+               </RoleRoute>
+            } />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
