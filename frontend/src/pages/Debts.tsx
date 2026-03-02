@@ -39,25 +39,32 @@ const Debts = () => {
         .filter((s: any) => Number(s.pendingBalance) > 0)
         .map((s: any) => ({ ...s, type: 'SALE' }));
 
-      // 2. Process Old Debts (Receivables)
+      // 2. Process Old Debts
       const activeOldDebts = oldDebtsRes.data
         .filter((d: any) => d.isActive && Number(d.pendingBalance) > 0)
         .map((d: any) => ({
             id: d.id,
             date: d.createdAt,
-            client: { name: d.clientName }, // Adapt to match Sale structure
-            amount: 0, // No foreign currency
+            // Assign name to correct property for display
+            client: d.type === 'CLIENT' || !d.type ? { name: d.clientName } : undefined,
+            provider: d.type === 'PROVIDER' ? { name: d.clientName } : undefined,
+            clientName: d.clientName,
+            amount: 0, 
             currency: { code: 'COP' },
             rate: 0,
             totalPesos: d.totalAmount,
             pendingBalance: d.pendingBalance,
             paidAmount: d.paidAmount,
             type: 'OLD_DEBT',
+            oldDebtType: d.type || 'CLIENT', // Default to CLIENT for backward compatibility
             description: d.description
         }));
 
+      const oldReceivables = activeOldDebts.filter((d: any) => d.oldDebtType !== 'PROVIDER');
+      const oldPayables = activeOldDebts.filter((d: any) => d.oldDebtType === 'PROVIDER');
+
       // Merge Receivables
-      const allReceivables = [...pendingSales, ...activeOldDebts]
+      const allReceivables = [...pendingSales, ...oldReceivables]
         .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
       
       setReceivables(allReceivables);
@@ -65,10 +72,12 @@ const Debts = () => {
       // 3. Process Purchases (Payables)
       const pendingPurchases = purchasesRes.data
         .filter((p: any) => Number(p.pendingBalance) > 0)
-        .map((p: any) => ({ ...p, type: 'PURCHASE' }))
+        .map((p: any) => ({ ...p, type: 'PURCHASE' }));
+
+      const allPayables = [...pendingPurchases, ...oldPayables]
         .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      setPayables(pendingPurchases);
+      setPayables(allPayables);
 
     } catch (error) {
       console.error(error);
@@ -80,13 +89,15 @@ const Debts = () => {
   const handleCreateOldDebt = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
+          const type = activeTab === 'receivable' ? 'CLIENT' : 'PROVIDER';
           await oldDebtsService.create({
               clientName,
               description,
               totalAmount: Number(totalAmount),
-              userId: user?.id
+              userId: user?.id,
+              type
           });
-          alert('Deuda antigua registrada correctamente');
+          alert(`Deuda antigua ${type === 'CLIENT' ? 'de cliente' : 'a proveedor'} registrada correctamente`);
           setShowOldDebtModal(false);
           setClientName('');
           setDescription('');
@@ -152,7 +163,12 @@ const Debts = () => {
   };
 
   const handleReversePayment = async (paymentId: string) => {
-      if (!window.confirm('¿Anular este abono? El dinero saldrá de la caja y la deuda aumentará.')) return;
+      const isPayable = selectedDebt.type === 'PURCHASE' || (selectedDebt.type === 'OLD_DEBT' && selectedDebt.oldDebtType === 'PROVIDER');
+      const warningMsg = isPayable 
+        ? '¿Anular este pago al proveedor? El dinero regresará a la caja y la deuda aumentará.'
+        : '¿Anular este abono del cliente? El dinero saldrá de la caja y la deuda aumentará.';
+
+      if (!window.confirm(warningMsg)) return;
       try {
           await paymentsService.reverse(paymentId, user?.id || '');
           alert('Abono anulado');
@@ -260,15 +276,14 @@ const Debts = () => {
             <p className="text-gray-500 text-sm mt-1">Gestiona las cuentas por cobrar y por pagar de operaciones de divisas.</p>
         </div>
         
-        {activeTab === 'receivable' && (
-            <button 
-                onClick={() => setShowOldDebtModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center shadow"
-            >
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Registrar Deuda Antigua
-            </button>
-        )}
+        {/* Button for both tabs */}
+        <button 
+            onClick={() => setShowOldDebtModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center shadow"
+        >
+            <PlusCircle className="mr-2 h-5 w-5" />
+            {activeTab === 'receivable' ? 'Registrar Deuda Antigua (Cliente)' : 'Registrar Deuda Proveedor'}
+        </button>
       </div>
 
       <div className="flex space-x-4 mb-6">
@@ -318,14 +333,20 @@ const Debts = () => {
       {showOldDebtModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Registrar Deuda Antigua</h2>
+            <h2 className="text-xl font-bold mb-4">
+                {activeTab === 'receivable' ? 'Registrar Deuda Antigua (Cliente)' : 'Registrar Deuda Proveedor'}
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
-                Use esto para clientes que ya le debían dinero antes de usar este sistema. 
-                El dinero abonado a esta deuda entrará a la Caja Operativa.
+                {activeTab === 'receivable' 
+                    ? 'Use esto para clientes que ya le debían dinero. El abono ENTRARÁ a la Caja.'
+                    : 'Use esto para registrar deudas antiguas con proveedores. El abono SALDRÁ de la Caja.'
+                }
             </p>
             <form onSubmit={handleCreateOldDebt}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                <label className="block text-sm font-medium text-gray-700">
+                    {activeTab === 'receivable' ? 'Nombre del Cliente' : 'Nombre del Proveedor'}
+                </label>
                 <input type="text" required className="w-full border rounded p-2 mt-1" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Ej: Juan Pérez" />
               </div>
               <div className="mb-4">
@@ -356,7 +377,7 @@ const Debts = () => {
             </div>
             
             <div className="mb-4 text-sm text-gray-600">
-                <p><strong>Cliente/Proveedor:</strong> {activeTab === 'receivable' ? (selectedDebt.client?.name || selectedDebt.clientName) : (selectedDebt.provider?.name)}</p>
+                <p><strong>{activeTab === 'receivable' ? 'Cliente' : 'Proveedor'}:</strong> {selectedDebt.clientName || selectedDebt.client?.name || selectedDebt.provider?.name}</p>
                 <p><strong>Total Deuda:</strong> $ {Number(selectedDebt.totalPesos).toLocaleString()}</p>
                 <p><strong>Saldo Pendiente:</strong> $ {Number(selectedDebt.pendingBalance).toLocaleString()}</p>
             </div>
