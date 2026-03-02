@@ -9,6 +9,9 @@ export class OldDebt {
   @Column()
   clientName: string;
 
+  @Column({ default: 'CLIENT' }) // 'CLIENT' (Receivable) | 'PROVIDER' (Payable)
+  type: string;
+
   @Column({ nullable: true })
   description: string;
 

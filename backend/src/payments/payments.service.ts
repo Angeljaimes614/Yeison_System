@@ -156,19 +156,25 @@ export class PaymentsService {
           capital.operativePlante = Number(capital.operativePlante) - amount;
 
       } else if (payment.oldDebtId) {
-          // Reversing a payment to old debt (We give money back)
+          // Reversing a payment to old debt
           const oldDebt = await queryRunner.manager.findOne(OldDebt, { where: { id: payment.oldDebtId } });
           if (oldDebt) {
               oldDebt.paidAmount = Number(oldDebt.paidAmount) - amount;
               oldDebt.pendingBalance = Number(oldDebt.pendingBalance) + amount;
               oldDebt.isActive = true; // Re-activate
               await queryRunner.manager.save(oldDebt);
+
+              if (oldDebt.type === 'PROVIDER') {
+                   // If it was a payment TO a provider, we get money BACK into Capital
+                   capital.operativePlante = Number(capital.operativePlante) + amount;
+              } else {
+                   // If it was a payment FROM a client, we give money BACK (Capital decreases)
+                   if (Number(capital.operativePlante) < amount) {
+                       throw new BadRequestException('Fondos insuficientes para devolver este pago');
+                   }
+                   capital.operativePlante = Number(capital.operativePlante) - amount;
+              }
           }
-          // Remove money from Capital
-          if (Number(capital.operativePlante) < amount) {
-              throw new BadRequestException('Fondos insuficientes para devolver este pago');
-          }
-          capital.operativePlante = Number(capital.operativePlante) - amount;
       }
 
       await queryRunner.manager.save(capital);

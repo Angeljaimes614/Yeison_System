@@ -6,7 +6,7 @@ export class OldDebtsController {
   constructor(private readonly oldDebtsService: OldDebtsService) {}
 
   @Post()
-  create(@Body() dto: { clientName: string; description: string; totalAmount: number; userId: string }) {
+  create(@Body() dto: { clientName: string; description: string; totalAmount: number; userId: string; type?: 'CLIENT' | 'PROVIDER' }) {
     return this.oldDebtsService.create(dto);
   }
 

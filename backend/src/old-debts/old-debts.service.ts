@@ -13,9 +13,9 @@ export class OldDebtsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  // 1. REGISTER OLD DEBT (Only creates record, does NOT affect Capital yet because money was lent long ago)
-  async create(data: { clientName: string; description: string; totalAmount: number; userId: string }) {
-    const { clientName, description, totalAmount, userId } = data;
+  // 1. REGISTER OLD DEBT (Only creates record, does NOT affect Capital yet because money was lent/borrowed long ago)
+  async create(data: { clientName: string; description: string; totalAmount: number; userId: string; type?: 'CLIENT' | 'PROVIDER' }) {
+    const { clientName, description, totalAmount, userId, type } = data;
 
     const debt = this.oldDebtRepository.create({
         clientName,
@@ -24,13 +24,14 @@ export class OldDebtsService {
         paidAmount: 0,
         pendingBalance: totalAmount,
         isActive: true,
-        createdById: userId
+        createdById: userId,
+        type: type || 'CLIENT'
     });
 
     return this.oldDebtRepository.save(debt);
   }
 
-  // 2. REGISTER PAYMENT (Money ENTERS Capital)
+  // 2. REGISTER PAYMENT (Money ENTERS or LEAVES Capital)
   async registerPayment(data: { debtId: string; amount: number; userId: string }) {
     const { debtId, amount, userId } = data;
 
@@ -57,7 +58,7 @@ export class OldDebtsService {
 
         await queryRunner.manager.save(debt);
 
-        // Update Capital (Money In)
+        // Update Capital (Money In or Out)
         const capitals = await queryRunner.manager.find(Capital);
         let capital = capitals.length > 0 ? capitals[0] : null;
 
@@ -65,10 +66,16 @@ export class OldDebtsService {
              capital = queryRunner.manager.create(Capital, { totalCapital: 0, operativePlante: 0, accumulatedProfit: 0 });
         }
 
-        capital.operativePlante = Number(capital.operativePlante) + Number(amount);
-        // Note: Does this count as Profit? 
-        // If it's returning capital, it's just cash flow. Profit depends on interest.
-        // For simplicity, we just add to Cash Flow (Operative Plante).
+        if (debt.type === 'PROVIDER') {
+            // I am paying the provider, so money leaves the cash register (OUT)
+            if (Number(capital.operativePlante) < Number(amount)) {
+                throw new BadRequestException('Fondos insuficientes en caja para realizar este abono a proveedor');
+            }
+            capital.operativePlante = Number(capital.operativePlante) - Number(amount);
+        } else {
+            // Client is paying me, so money enters the cash register (IN)
+            capital.operativePlante = Number(capital.operativePlante) + Number(amount);
+        }
         
         await queryRunner.manager.save(capital);
 
