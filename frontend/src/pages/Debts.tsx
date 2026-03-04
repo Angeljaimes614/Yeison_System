@@ -16,6 +16,10 @@ const Debts = () => {
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
 
+  // Increase Debt Modal
+  const [showIncreaseModal, setShowIncreaseModal] = useState(false);
+  const [increaseAmount, setIncreaseAmount] = useState('');
+
   // History Modal
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [debtPayments, setDebtPayments] = useState<any[]>([]);
@@ -45,7 +49,6 @@ const Debts = () => {
         .map((d: any) => ({
             id: d.id,
             date: d.createdAt,
-            // Assign name to correct property for display
             client: d.type === 'CLIENT' || !d.type ? { name: d.clientName } : undefined,
             provider: d.type === 'PROVIDER' ? { name: d.clientName } : undefined,
             clientName: d.clientName,
@@ -56,7 +59,7 @@ const Debts = () => {
             pendingBalance: d.pendingBalance,
             paidAmount: d.paidAmount,
             type: 'OLD_DEBT',
-            oldDebtType: d.type || 'CLIENT', // Default to CLIENT for backward compatibility
+            oldDebtType: d.type || 'CLIENT', 
             description: d.description
         }));
 
@@ -149,6 +152,30 @@ const Debts = () => {
       }
   };
 
+  const handleOpenIncrease = (tx: any) => {
+      setSelectedDebt(tx);
+      setShowIncreaseModal(true);
+  };
+
+  const handleIncreaseDebt = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!increaseAmount || isNaN(Number(increaseAmount)) || Number(increaseAmount) <= 0) return;
+
+      try {
+          await oldDebtsService.increase({
+              debtId: selectedDebt.id,
+              amount: Number(increaseAmount),
+              userId: user?.id
+          });
+          alert('Deuda incrementada correctamente');
+          setShowIncreaseModal(false);
+          setIncreaseAmount('');
+          loadData();
+      } catch (error: any) {
+          alert('Error: ' + (error.response?.data?.message || 'Error desconocido'));
+      }
+  };
+
   const handleOpenHistory = async (tx: any) => {
       setSelectedDebt(tx);
       try {
@@ -163,15 +190,10 @@ const Debts = () => {
   };
 
   const handleReversePayment = async (paymentId: string) => {
-      const isPayable = selectedDebt.type === 'PURCHASE' || (selectedDebt.type === 'OLD_DEBT' && selectedDebt.oldDebtType === 'PROVIDER');
-      const warningMsg = isPayable 
-        ? '¿Anular este pago al proveedor? El dinero regresará a la caja y la deuda aumentará.'
-        : '¿Anular este abono del cliente? El dinero saldrá de la caja y la deuda aumentará.';
-
-      if (!window.confirm(warningMsg)) return;
+      if (!window.confirm('¿Anular este movimiento?')) return;
       try {
           await paymentsService.reverse(paymentId, user?.id || '');
-          alert('Abono anulado');
+          alert('Movimiento anulado');
           // Reload payments
           const type = selectedDebt.type === 'SALE' ? 'sale' : selectedDebt.type === 'PURCHASE' ? 'purchase' : 'old-debt';
           const res = await paymentsService.findByTransaction(type, selectedDebt.id);
@@ -237,14 +259,25 @@ const Debts = () => {
                   <button
                     onClick={() => handlePayment(tx)}
                     className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none"
+                    title="Registrar Abono"
                   >
                     <Wallet className="h-3 w-3 mr-1" />
                     Abonar
                   </button>
+                  {tx.type === 'OLD_DEBT' && (
+                    <button
+                        onClick={() => handleOpenIncrease(tx)}
+                        className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded shadow-sm text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none"
+                        title="Sumar más deuda (Nuevo préstamo)"
+                    >
+                        <PlusCircle className="h-3 w-3 mr-1" />
+                        Sumar
+                    </button>
+                  )}
                   <button
                     onClick={() => handleOpenHistory(tx)}
                     className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-                    title="Ver Historial de Abonos"
+                    title="Ver Historial"
                   >
                     <History className="h-3 w-3" />
                   </button>
@@ -367,18 +400,50 @@ const Debts = () => {
         </div>
       )}
 
+      {/* Modal Aumentar Deuda */}
+      {showIncreaseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-sm w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Aumentar Deuda</h2>
+            <p className="text-sm text-gray-500 mb-4">
+                {activeTab === 'receivable' 
+                   ? 'Esto registrará un NUEVO PRÉSTAMO. El dinero SALDRÁ de la Caja.'
+                   : 'Esto registrará una NUEVA DEUDA con el proveedor. El dinero ENTRARÁ a la Caja (si fue préstamo) o no afectará si es mercancía (ojo con esto, el sistema asume entrada de dinero por ahora).'
+                }
+            </p>
+            <form onSubmit={handleIncreaseDebt}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Monto Adicional</label>
+                <input 
+                    type="number" 
+                    required 
+                    className="w-full border rounded p-2 mt-1" 
+                    value={increaseAmount} 
+                    onChange={e => setIncreaseAmount(e.target.value)} 
+                    placeholder="0" 
+                    autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <button type="button" onClick={() => setShowIncreaseModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modal Historial Abonos */}
       {showHistoryModal && selectedDebt && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Historial de Abonos</h2>
+                <h2 className="text-xl font-bold">Historial de Movimientos</h2>
                 <button onClick={() => setShowHistoryModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
             </div>
             
             <div className="mb-4 text-sm text-gray-600">
                 <p><strong>{activeTab === 'receivable' ? 'Cliente' : 'Proveedor'}:</strong> {selectedDebt.clientName || selectedDebt.client?.name || selectedDebt.provider?.name}</p>
-                <p><strong>Total Deuda:</strong> $ {Number(selectedDebt.totalPesos).toLocaleString()}</p>
                 <p><strong>Saldo Pendiente:</strong> $ {Number(selectedDebt.pendingBalance).toLocaleString()}</p>
             </div>
 
@@ -386,7 +451,8 @@ const Debts = () => {
                <thead className="bg-gray-50">
                   <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Fecha</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Monto Abonado</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Tipo</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Monto</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Usuario</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Acción</th>
                   </tr>
@@ -398,8 +464,16 @@ const Debts = () => {
                               {new Date(p.date).toLocaleDateString()} {new Date(p.date).toLocaleTimeString()}
                               {p.isReversed && <span className="block text-xs text-red-600 font-bold">ANULADO</span>}
                           </td>
-                          <td className={`px-4 py-2 text-sm font-bold ${p.isReversed ? 'line-through text-gray-400' : 'text-green-600'}`}>
-                              $ {Number(p.amount).toLocaleString()}
+                          <td className="px-4 py-2 text-xs font-bold uppercase">
+                              {p.type === 'DEBT_INCREASE' 
+                                ? <span className="text-blue-600">Nuevo Préstamo</span> 
+                                : <span className="text-green-600">Abono</span>}
+                          </td>
+                          <td className={`px-4 py-2 text-sm font-bold ${
+                              p.isReversed ? 'line-through text-gray-400' : 
+                              p.type === 'DEBT_INCREASE' ? 'text-blue-600' : 'text-green-600'
+                          }`}>
+                              {p.type === 'DEBT_INCREASE' ? '+' : '-'} $ {Number(p.amount).toLocaleString()}
                           </td>
                           <td className="px-4 py-2 text-sm text-gray-500">
                               {p.createdBy?.username || 'Sistema'}
@@ -417,7 +491,7 @@ const Debts = () => {
                       </tr>
                   ))}
                   {debtPayments.length === 0 && (
-                      <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">No hay abonos registrados.</td></tr>
+                      <tr><td colSpan={5} className="px-4 py-4 text-center text-gray-500">No hay movimientos registrados.</td></tr>
                   )}
                </tbody>
             </table>

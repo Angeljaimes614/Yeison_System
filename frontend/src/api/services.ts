@@ -75,6 +75,7 @@ export const paymentsService = {
 export const oldDebtsService = {
   create: (data: any) => api.post('/old-debts', data),
   registerPayment: (data: any) => api.post('/old-debts/payment', data),
+  increase: (data: any) => api.post('/old-debts/increase', data),
   findAll: () => api.get('/old-debts'),
 };
 
