@@ -206,6 +206,7 @@ const Debts = () => {
 
   const renderTable = (transactions: any[], isPayable: boolean) => (
     <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
@@ -295,6 +296,7 @@ const Debts = () => {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 
@@ -447,6 +449,7 @@ const Debts = () => {
                 <p><strong>Saldo Pendiente:</strong> $ {Number(selectedDebt.pendingBalance).toLocaleString()}</p>
             </div>
 
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
                <thead className="bg-gray-50">
                   <tr>
@@ -495,6 +498,7 @@ const Debts = () => {
                   )}
                </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
