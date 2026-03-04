@@ -49,9 +49,8 @@ export class CapitalService {
         capital.operativePlante = currentPlante + numAmount;
         capital.totalCapital = currentTotal + numAmount;
       } else if (type === 'WITHDRAWAL_PROFIT') {
-        // Check funds
-        if (currentPlante < numAmount) throw new BadRequestException('Insufficient Cash in Operative Plante');
-        if (currentProfit < numAmount) throw new BadRequestException('Insufficient Accumulated Profit');
+        // Check funds (Cash must exist to pay, but Profit can go negative)
+        if (currentPlante < numAmount) throw new BadRequestException('Fondos insuficientes en Caja Operativa para realizar este gasto/retiro.');
         
         // Decrease Cash and Profit
         capital.operativePlante = currentPlante - numAmount;
