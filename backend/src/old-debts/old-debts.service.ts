@@ -100,6 +100,63 @@ export class OldDebtsService {
     }
   }
 
+  async increase(data: { debtId: string; amount: number; userId: string }) {
+    const { debtId, amount, userId } = data;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+        const debt = await queryRunner.manager.findOne(OldDebt, { where: { id: debtId } });
+        if (!debt) throw new NotFoundException('Deuda no encontrada');
+
+        // Update Debt
+        debt.totalAmount = Number(debt.totalAmount) + Number(amount);
+        debt.pendingBalance = Number(debt.pendingBalance) + Number(amount);
+        debt.isActive = true;
+
+        await queryRunner.manager.save(debt);
+
+        // Update Capital
+        const capitals = await queryRunner.manager.find(Capital);
+        let capital = capitals.length > 0 ? capitals[0] : null;
+        if (!capital) capital = queryRunner.manager.create(Capital, { totalCapital: 0, operativePlante: 0, accumulatedProfit: 0 });
+
+        if (debt.type === 'CLIENT' || !debt.type) {
+            // Lending MORE money to client -> Money OUT
+            if (Number(capital.operativePlante) < Number(amount)) {
+                throw new BadRequestException('Fondos insuficientes en caja para aumentar este préstamo');
+            }
+            capital.operativePlante = Number(capital.operativePlante) - Number(amount);
+        } else {
+            // Borrowing MORE money from provider -> Money IN
+            capital.operativePlante = Number(capital.operativePlante) + Number(amount);
+        }
+        await queryRunner.manager.save(capital);
+
+        // Create Payment Record (as DEBT_INCREASE)
+        const payment = queryRunner.manager.create(Payment, {
+            date: new Date(),
+            amount: amount,
+            method: 'cash',
+            oldDebtId: debt.id,
+            createdById: userId,
+            type: 'DEBT_INCREASE'
+        });
+        await queryRunner.manager.save(payment);
+
+        await queryRunner.commitTransaction();
+        return debt;
+
+    } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+    } finally {
+        await queryRunner.release();
+    }
+  }
+
   findAll() {
     return this.oldDebtRepository.find({
         order: { createdAt: 'DESC' }

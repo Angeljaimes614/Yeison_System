@@ -15,6 +15,11 @@ export class OldDebtsController {
     return this.oldDebtsService.registerPayment(dto);
   }
 
+  @Post('increase')
+  increase(@Body() dto: { debtId: string; amount: number; userId: string }) {
+    return this.oldDebtsService.increase(dto);
+  }
+
   @Get()
   findAll() {
     return this.oldDebtsService.findAll();

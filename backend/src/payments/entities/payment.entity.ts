@@ -17,6 +17,9 @@ export class Payment {
   @Column({ default: 'cash' })
   method: string; // cash, transfer
 
+  @Column({ default: 'PAYMENT' }) // 'PAYMENT', 'DEBT_INCREASE'
+  type: string;
+
   @Column({ nullable: true })
   purchaseId: string;
 
