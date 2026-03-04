@@ -1,0 +1,136 @@
+================================================================================
+MANUAL TÉCNICO Y FUNCIONAL - SISTEMA ERP DE CAMBIO DE DIVISAS (YEISON SYSTEM)
+================================================================================
+
+1. DESCRIPCIÓN GENERAL
+--------------------------------------------------------------------------------
+Este es un sistema ERP (Enterprise Resource Planning) diseñado específicamente para 
+el negocio de compra y venta de divisas. Su arquitectura está dividida en dos 
+partes principales:
+
+A. BACKEND (Servidor): Hecho en NestJS (Node.js) + TypeORM + PostgreSQL.
+   - Se encarga de la lógica, cálculos, seguridad y base de datos.
+   
+B. FRONTEND (Cliente): Hecho en React + Vite + TailwindCSS.
+   - Es la interfaz visual que usan los cajeros y administradores.
+
+================================================================================
+2. ESTRUCTURA DEL BACKEND (CARPETA /backend)
+--------------------------------------------------------------------------------
+El backend está organizado por "Módulos". Cada módulo maneja una parte específica 
+del negocio:
+
+[Auth Module]
+- Se encarga del Login y la seguridad.
+- Genera los "Tokens" (JWT) para que el usuario no tenga que loguearse a cada rato.
+- Protege las rutas para que solo usuarios autorizados entren.
+
+[Capital Module] (CRÍTICO)
+- Maneja el dinero base de la empresa ("Plante Operativo").
+- Lógica Clave: Existe un Capital Global.
+- Cuando se COMPRA divisa: El Capital en PESOS (COP) disminuye.
+- Cuando se VENDE divisa: El Capital en PESOS (COP) aumenta.
+- Contiene la lógica para asegurar que no se gaste más de lo que se tiene.
+
+[Currencies Module]
+- Catálogo de monedas (USDT, Dólar Físico, Euro, Zelle, Bolívares, etc.).
+- Define las tasas de compra y venta sugeridas.
+
+[Purchases Module] (Compras)
+- Registra cuando un cliente nos vende divisas.
+- Acción: Resta COP del Capital -> Suma Saldo al Inventario de la moneda comprada.
+- Genera el historial de compras.
+
+[Sales Module] (Ventas)
+- Registra cuando vendemos divisas a un cliente.
+- Acción: Suma COP al Capital (incluyendo ganancia) -> Resta Saldo del Inventario.
+- Calcula la ganancia basada en la diferencia entre precio de compra y venta.
+
+[Inventory Module]
+- Lleva el conteo de cuánta divisa extranjera tenemos (Ej: 500 USDT, 100 Euros).
+- Actualmente funciona "por detrás" para alimentar el Dashboard, aunque la vista 
+  de detalle se ha ocultado por solicitud.
+
+[Branches Module]
+- Maneja las sucursales (Cúcuta, Sede Principal, etc.).
+- Permite que en el futuro se puedan tener múltiples cajas separadas.
+
+[Users Module]
+- Gestión de empleados y administradores.
+- Roles: 
+  * Admin: Ve todo, mueve capital, ve reportes globales.
+  * Empleado: Solo opera en su sucursal asignada.
+
+[Expenses Module] (DESHABILITADO)
+- Módulo para registrar gastos operativos (Nómina, Arriendo, etc.).
+- Actualmente desactivado en código por solicitud del usuario.
+
+================================================================================
+3. ESTRUCTURA DEL FRONTEND (CARPETA /frontend)
+--------------------------------------------------------------------------------
+La interfaz visual está organizada en "Páginas" (Pages) y "Componentes".
+
+[Dashboard] (Pantalla Principal)
+- Muestra el resumen en tiempo real.
+- Tarjetas Superiores: Total en COP, Total en Dólares, USDT, Euros, etc.
+- Se actualiza automáticamente cada 30 segundos o manualmente con botón.
+- Lógica: Suma todo el inventario activo y consulta el capital global.
+
+[Operations] (El corazón del día a día)
+- Interfaz para Cajeros.
+- Pestaña COMPRAR: Formulario para ingresar qué moneda entra y cuántos pesos salen.
+- Pestaña VENDER: Formulario para ingresar qué moneda sale y cuántos pesos entran.
+- Calcula automáticamente los totales según la tasa de cambio ingresada.
+
+[Capital] (Solo Admin)
+- Permite ver el "Arqueo" de caja.
+- Permite inyectar más dinero al sistema (Aumentar Plante).
+- Permite retirar ganancias.
+
+[Reports]
+- Tabla histórica de todas las transacciones (Compras y Ventas).
+- Filtros:
+  * Por Día específico.
+  * Por Mes y Año.
+- Permite auditar qué pasó en el pasado.
+
+[Layout & Navigation]
+- Barra lateral (Sidebar) con el menú.
+- Maneja la sesión del usuario (muestra quién está logueado).
+- Botón de Salir.
+
+================================================================================
+4. FLUJO DE DATOS (EJEMPLO PRÁCTICO)
+--------------------------------------------------------------------------------
+
+Caso: Comprar 100 USDT a tasa de 3.800 COP.
+
+1. Usuario entra a "Operaciones" -> "Comprar".
+2. Ingresa: Moneda (USDT), Monto (100), Tasa (3800).
+3. Frontend calcula Total: 380.000 COP.
+4. Al dar "Guardar":
+   a. Backend verifica si hay 380.000 COP en el Capital (Plante).
+   b. Backend RESTA 380.000 COP del Capital Global.
+   c. Backend CREA un registro de Compra.
+   d. Backend SUMA 100 USDT al Inventario.
+5. El Dashboard se actualiza: Menos Pesos, Más USDT.
+
+Caso: Vender 100 USDT a tasa de 4.000 COP.
+
+1. Usuario entra a "Operaciones" -> "Vender".
+2. Ingresa: Moneda (USDT), Monto (100), Tasa (4000).
+3. Frontend calcula Total: 400.000 COP.
+4. Al dar "Guardar":
+   a. Backend verifica si hay 100 USDT en Inventario.
+   b. Backend RESTA 100 USDT del Inventario.
+   c. Backend CREA un registro de Venta.
+   d. Backend SUMA 400.000 COP al Capital Global.
+5. El Dashboard se actualiza: Más Pesos (Recuperamos los 380k + 20k ganancia), Menos USDT.
+
+================================================================================
+5. ESTADO ACTUAL (NOTAS DE MANTENIMIENTO)
+--------------------------------------------------------------------------------
+- El módulo de GASTOS fue eliminado visual y funcionalmente.
+- El módulo de INVENTARIO (Vista detallada) fue ocultado del menú.
+- El sistema de reportes tiene filtros avanzados de fecha.
+- El Dashboard fuerza la lectura del Capital Global para evitar errores visuales.

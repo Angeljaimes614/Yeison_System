@@ -1,0 +1,100 @@
+================================================================================
+COTIZACIÓN DE DESARROLLO DE SOFTWARE - SISTEMA ERP YM
+================================================================================
+Fecha: 28 de Febrero de 2026
+Cliente: YM Inversiones
+Desarrollador: Angel Jaimes
+Proyecto: Sistema de Gestión Financiera y Operativa (Balance Financiero YM)
+
+================================================================================
+1. ALCANCE DEL PROYECTO (LO ENTREGADO)
+================================================================================
+El sistema desarrollado es una solución ERP (Enterprise Resource Planning) a la medida,
+diseñada para gestionar la complejidad de un negocio de divisas, inversiones físicas y préstamos.
+
+A. MÓDULO DE OPERACIONES DE DIVISAS
+   - Compra y Venta de múltiples monedas (Dólar, Euro, USDT, Bolívares, etc).
+   - Cálculo automático de tasas promedio ponderadas (para utilidad real).
+   - Conversión entre monedas (Arbitraje) con traslado de costos.
+   - Validación de inventario en tiempo real.
+
+B. GESTIÓN DE INVERSIONES (PRODUCTOS FÍSICOS)
+   - Inventario de Celulares, Billares, Vehículos, etc.
+   - Control de Stock, Costo Unitario Promedio y Precio de Venta.
+   - Cálculo automático de Utilidad por producto.
+   - Historial de transacciones por ítem.
+
+C. MÓDULO FINANCIERO AVANZADO (BALANCE YM)
+   - Control total de Caja Operativa (COP).
+   - Valorización en tiempo real del Patrimonio (Divisas + Productos).
+   - Cálculo de Utilidad Neta acumulada.
+   - Registro de Gastos Operativos, Inyecciones de Capital y Retiros.
+   - Historial de movimientos de caja (Auditoría).
+
+D. CARTERA Y DEUDAS
+   - Cuentas por Cobrar (Clientes fiados y préstamos antiguos).
+   - Cuentas por Pagar (Proveedores).
+   - Sistema de Abonos parciales y totales.
+   - Historial de pagos y anulación de abonos erróneos.
+
+E. SEGURIDAD Y ROLES
+   - Sistema de Autenticación seguro (JWT).
+   - Roles: Administrador, Supervisor, Cajero e INVERSIONISTA (Acceso restringido).
+   - Auditoría de quién hizo qué operación.
+
+F. REPORTES Y EXPORTACIÓN
+   - Reportes detallados por rango de fecha.
+   - Exportación a Excel.
+   - Funcionalidad de "Anular Operación" (Reversos contables automáticos).
+
+================================================================================
+2. VALORACIÓN POR MÓDULOS (PRECIOS SUGERIDOS COP)
+================================================================================
+
+1. DESARROLLO BACKEND (LÓGICA Y BASE DE DATOS) ................ $ 2.500.000
+   - API RESTful segura con NestJS.
+   - Base de datos PostgreSQL optimizada.
+   - Lógica contable compleja (Promedios ponderados, reversos).
+
+2. DESARROLLO FRONTEND (INTERFAZ DE USUARIO) .................. $ 2.000.000
+   - Diseño moderno y responsivo (React + Tailwind).
+   - Tablas dinámicas, filtros y modales.
+   - Experiencia de usuario (UX) intuitiva.
+
+3. MÓDULO FINANCIERO Y REPORTES ............................... $ 1.200.000
+   - Dashboards con gráficos.
+   - Balance Financiero Unificado.
+   - Exportación a Excel.
+
+4. IMPLEMENTACIÓN Y DESPLIEGUE ................................ $   800.000
+   - Configuración en servidor (Nube).
+   - Dominio y certificados SSL.
+   - Capacitación inicial y Manual de Usuario.
+
+================================================================================
+SUBTOTAL DESARROLLO ........................................... $ 6.500.000
+================================================================================
+
+================================================================================
+3. SERVICIOS ADICIONALES (OPCIONALES / MENSUALES)
+================================================================================
+- MANTENIMIENTO Y SOPORTE MENSUAL ............................. $   300.000 / mes
+  * Copias de seguridad diarias.
+  * Soporte técnico prioritario.
+  * Ajustes menores y correcciones.
+  * Pago de servidor y dominio (si aplica).
+
+================================================================================
+4. CONDICIONES DE PAGO
+================================================================================
+- Anticipo (50%): $ 3.250.000 (Para iniciar / entregar código fuente).
+- Final (50%): $ 3.250.000 (Contra entrega y puesta en marcha).
+- Garantía: 3 meses de soporte gratuito sobre errores de fábrica.
+
+================================================================================
+TOTAL PROYECTO ................................................ $ 6.500.000 COP
+================================================================================
+
+Nota: Este software es propiedad intelectual del desarrollador hasta el pago total.
+El código fuente se entrega bajo licencia de uso exclusivo para YM Inversiones.
+================================================================================

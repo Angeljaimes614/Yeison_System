@@ -1,0 +1,185 @@
+================================================================================
+MANUAL DE USUARIO - SISTEMA YM (BALANCE FINANCIERO)
+================================================================================
+Versión: 1.0
+Fecha: 28 de Febrero de 2026
+
+¡Bienvenido al Sistema YM!
+Este software ha sido diseñado para gestionar de manera integral sus operaciones de compra/venta de divisas, inventario de productos (celulares, billares, etc.), cartera de deudas y control financiero total.
+
+================================================================================
+TABLA DE CONTENIDO
+================================================================================
+1. ACCESO AL SISTEMA
+2. DASHBOARD (PANTALLA PRINCIPAL)
+3. OPERACIONES (COMPRA Y VENTA DE DIVISAS)
+4. CARTERA Y DEUDAS
+5. INVERSIONES (PRODUCTOS FÍSICOS)
+6. BALANCE FINANCIERO YM (GESTIÓN DE CAJA)
+7. REPORTES Y ANULACIONES
+8. CONFIGURACIÓN (RESETEO)
+9. GESTIÓN DE USUARIOS Y ROLES
+
+================================================================================
+1. ACCESO AL SISTEMA
+================================================================================
+- Ingrese su Usuario y Contraseña proporcionados por el administrador.
+- Roles Disponibles:
+  * Administrador: Acceso total a todo el sistema.
+  * Supervisor: Acceso a todo excepto gestión de usuarios.
+  * Cajero: Acceso a operaciones diarias, pero sin permisos críticos de configuración.
+  * Inversionista: Acceso EXCLUSIVO al módulo de "Inversiones" (Productos). No ve nada más.
+
+================================================================================
+2. DASHBOARD (PANTALLA PRINCIPAL)
+================================================================================
+Es el centro de control donde verá el estado actual de su negocio en tiempo real.
+
+- Tarjetas Superiores:
+  * Caja Operativa (COP): Dinero en efectivo disponible para operar.
+  * Utilidad Neta Real: Ganancias acumuladas (Disponible para retirar).
+  * Inventario DÓLAR, EURO, USDT, ETC: Cantidad de divisas disponibles.
+  
+- Gráficos:
+  * Distribución de Inventario: Muestra qué porcentaje de su capital está en cada moneda.
+  * Tendencia de Utilidad: Gráfico de línea con sus ganancias en el tiempo.
+
+================================================================================
+3. OPERACIONES (COMPRA Y VENTA DE DIVISAS)
+================================================================================
+Aquí es donde se realiza el "trabe" diario de divisas.
+
+A. COMPRA DE DIVISAS (Entra Divisa, Sale Pesos)
+   1. Seleccione la pestaña "COMPRAR".
+   2. Elija la Moneda (Dólar, Euro, USDT, etc.).
+   3. Ingrese la Cantidad a comprar.
+   4. Ingrese la Tasa de Compra (Precio por unidad).
+   5. (Opcional) Seleccione Cliente Frecuente o escriba uno nuevo.
+   6. Marque "Pago Pendiente (Fiado)" si no paga de inmediato.
+   7. Clic en "Registrar Compra".
+   -> El sistema resta Pesos de la Caja y suma Divisas al Inventario.
+
+B. VENTA DE DIVISAS (Sale Divisa, Entra Pesos)
+   1. Seleccione la pestaña "VENDER".
+   2. Elija la Moneda.
+   3. Ingrese la Cantidad a vender (El sistema valida si tiene saldo).
+   4. Ingrese la Tasa de Venta.
+   -> El sistema le mostrará inmediatamente la UTILIDAD estimada de esa operación (basado en el costo promedio).
+   5. Clic en "Registrar Venta".
+   -> El sistema suma Pesos a la Caja, resta Divisas y registra la Utilidad.
+
+C. CONVERSIÓN ENTRE DIVISAS (Arbitraje)
+   1. Seleccione la pestaña "CONVERSIÓN".
+   2. Moneda Origen (lo que entrega).
+   3. Moneda Destino (lo que recibe).
+   4. Ingrese montos.
+   -> El sistema transfiere el COSTO promedio de una moneda a la otra para mantener la contabilidad exacta.
+
+================================================================================
+4. CARTERA Y DEUDAS
+================================================================================
+Gestione todo lo que le deben (Clientes) y lo que usted debe (Proveedores).
+
+- Pestaña "POR COBRAR (CLIENTES)":
+  * Lista de todas las ventas fiadas y deudas antiguas.
+  * Botón "Abonar": Para registrar pagos parciales o totales.
+  * Botón "Reloj" (Historial): Vea todos los abonos realizados a esa deuda. Puede ANULAR un abono si se equivocó.
+  
+- Pestaña "POR PAGAR (PROVEEDORES)":
+  * Lista de compras que usted no ha pagado.
+  
+- Botón "REGISTRAR DEUDA ANTIGUA":
+  * Use esto para ingresar saldos iniciales de clientes que ya le debían dinero antes de usar este sistema.
+  * Ingrese Cliente, Concepto y Monto Total.
+
+================================================================================
+5. INVERSIONES (PRODUCTOS FÍSICOS)
+================================================================================
+Módulo para controlar mercancía como Celulares, Billares, Carros, etc.
+
+- Crear Nuevo Producto:
+  * Botón "Nuevo Producto".
+  * Ingrese Nombre, Categoría, Cantidad Comprada y Costo Total.
+  * El dinero del costo SALE de la Caja Operativa automáticamente.
+
+- Vender Producto:
+  * Clic en "Vender" (Carrito verde).
+  * Ingrese Cantidad y Precio de Venta.
+  * El sistema calcula la Utilidad y suma el dinero a la Caja.
+
+- Reabastecer (Surtir):
+  * Clic en "Surtir" (Botón morado).
+  * Use esto cuando compre MÁS unidades de un producto existente.
+  * El sistema recalcula el "Costo Promedio" automáticamente.
+
+- Historial y Anulación:
+  * Clic en "Historial" para ver todas las ventas de ese producto.
+  * Puede ANULAR una venta si hubo error (devuelve stock y dinero).
+
+- Eliminar:
+  * Icono de Basura para borrar un producto y todo su historial.
+
+================================================================================
+6. BALANCE FINANCIERO YM (GESTIÓN DE CAJA)
+================================================================================
+El cerebro financiero de su negocio.
+
+- Tarjetas de Resumen:
+  * Caja Operativa: Dinero efectivo real.
+  * Valor Inventario (Est.): Suma del valor de todas sus Divisas + Productos.
+  * Utilidad Neta: Ganancias totales acumuladas.
+  * Patrimonio Total: Cuánto vale su negocio hoy (Caja + Inventario).
+
+- Acciones Rápidas:
+  1. REGISTRAR GASTO OPERATIVO (Rojo):
+     * Pago de arriendo, nómina, luz, comida.
+     * Resta de la Caja y resta de la Utilidad Neta.
+  
+  2. INYECTAR CAPITAL (Verde):
+     * Dinero nuevo que entra de un socio o préstamo.
+     * Suma a la Caja y al Patrimonio. NO cuenta como ganancia (utilidad).
+
+  3. RETIRAR UTILIDAD (Naranja):
+     * Retiro de ganancias para uso personal.
+     * Resta de la Caja y de la Utilidad Neta.
+
+- Historial de Movimientos:
+  * Tabla detallada con fecha, hora, responsable y monto de cada movimiento de caja.
+
+================================================================================
+7. REPORTES Y ANULACIONES
+================================================================================
+Auditoría completa de todas las operaciones.
+
+- Filtros: Por fecha, tipo (Compra/Venta), moneda, usuario.
+- Exportar: Botón para descargar en Excel.
+- ANULACIÓN (Corrección de Errores):
+  * Si cometió un error en una Compra, Venta o Conversión, búsquela aquí.
+  * Clic en el botón "ANULAR" (Rojo).
+  * El sistema reversará toda la operación: devolverá el dinero, ajustará el stock y cancelará la utilidad.
+  * Quedará marcada como "ANULADA" en rojo.
+
+================================================================================
+8. CONFIGURACIÓN (ZONA DE PELIGRO)
+================================================================================
+- Botón "REINICIAR SISTEMA (BORRAR TODO)":
+  * Úselo con extrema precaución.
+  * Borra TODAS las ventas, compras, inventarios, deudas e historial.
+  * Deja el sistema en CERO (como nuevo).
+  * No borra los usuarios ni las monedas configuradas.
+  * Requiere doble confirmación y escribir "BORRAR TODO".
+
+================================================================================
+9. GESTIÓN DE USUARIOS
+================================================================================
+Solo disponible para el Administrador.
+- Crear Usuario: Asigne Nombre, Usuario, Contraseña y Rol.
+- Roles Especiales:
+  * Si asigna el rol "INVERSIONISTA", ese usuario solo podrá entrar al módulo de INVERSIONES. No verá nada más del sistema. Ideal para socios o encargados de mercancía específica.
+
+================================================================================
+SOPORTE
+================================================================================
+Para soporte técnico, contacte al desarrollador del sistema.
+Sistema desarrollado a la medida para YM Inversiones.
+================================================================================

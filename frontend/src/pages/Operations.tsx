@@ -34,7 +34,9 @@ const Operations = () => {
   
   // Form State
   const [currencyId, setCurrencyId] = useState('');
-  const [entityId, setEntityId] = useState(''); // Provider or Client ID
+  const [entityId, setEntityId] = useState(''); // Provider or Client Name Input
+  const [selectedEntityId, setSelectedEntityId] = useState(''); // The actual UUID if found
+  
   const [amount, setAmount] = useState('');
   const [rate, setRate] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
@@ -96,6 +98,20 @@ const Operations = () => {
   const getAverageCost = (currId: string) => {
     const item = globalInventory.find((i: any) => i.currencyId === currId);
     return item ? Number(item.averageCost) : 0;
+  };
+
+  const handleEntityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setEntityId(val);
+      
+      // Try to find matching ID automatically
+      if (activeTab === 'purchase') {
+          const found = providers.find((p: any) => p.name === val);
+          setSelectedEntityId(found ? found.id : '');
+      } else {
+          const found = clients.find((c: any) => c.name === val);
+          setSelectedEntityId(found ? found.id : '');
+      }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,20 +179,24 @@ const Operations = () => {
           ...commonData,
           operationType: operationType,
           providerName: entityId,
-          providerId: undefined,
+          providerId: selectedEntityId || undefined,
         });
         setSuccess('Compra registrada exitosamente');
       } else {
         await salesService.create({
           ...commonData,
           clientName: entityId,
-          clientId: undefined,
+          clientId: selectedEntityId || undefined,
         });
         setSuccess('Venta registrada exitosamente');
       }
       
       setAmount('');
       setPaidAmount('');
+      // Keep entityId? Usually better to clear for next customer
+      setEntityId('');
+      setSelectedEntityId('');
+      
       loadData(); // Refresh inventory
     } catch (err: any) {
       console.error(err);
@@ -243,7 +263,7 @@ const Operations = () => {
       {/* Tabs */}
       <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
         <button
-          onClick={() => setActiveTab('purchase')}
+          onClick={() => { setActiveTab('purchase'); setEntityId(''); setSelectedEntityId(''); }}
           className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg flex items-center justify-center transition-all min-w-[150px] ${
             activeTab === 'purchase' 
               ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300' 
@@ -254,7 +274,7 @@ const Operations = () => {
           COMPRA
         </button>
         <button
-          onClick={() => setActiveTab('sale')}
+          onClick={() => { setActiveTab('sale'); setEntityId(''); setSelectedEntityId(''); }}
           className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg flex items-center justify-center transition-all min-w-[150px] ${
             activeTab === 'sale' 
               ? 'bg-green-600 text-white shadow-lg ring-2 ring-green-300' 
@@ -401,14 +421,28 @@ const Operations = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nombre del {activeTab === 'purchase' ? 'Proveedor' : 'Cliente'}
                   </label>
-                  <input
-                    type="text"
-                    required
-                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3"
-                    placeholder={`Nombre del ${activeTab === 'purchase' ? 'proveedor' : 'cliente'} (Opcional)`}
-                    value={entityId}
-                    onChange={(e) => setEntityId(e.target.value)}
-                  />
+                  <div className="relative">
+                      <input
+                        type="text"
+                        list="entity-list"
+                        className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3"
+                        placeholder={`Buscar o escribir nombre...`}
+                        value={entityId}
+                        onChange={handleEntityChange}
+                      />
+                      <datalist id="entity-list">
+                          {activeTab === 'purchase' 
+                              ? (Array.isArray(providers) ? providers.map((p: any) => <option key={p.id} value={p.name} />) : [])
+                              : (Array.isArray(clients) ? clients.map((c: any) => <option key={c.id} value={c.name} />) : [])
+                          }
+                      </datalist>
+                  </div>
+                  {selectedEntityId && (
+                      <p className="text-xs text-green-600 mt-1 flex items-center">
+                          <Check className="h-3 w-3 mr-1" />
+                          {activeTab === 'purchase' ? 'Proveedor' : 'Cliente'} identificado en el sistema.
+                      </p>
+                  )}
                 </div>
 
                 {/* Amount & Rate */}
