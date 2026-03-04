@@ -157,6 +157,76 @@ export class OldDebtsService {
     }
   }
 
+  async remove(id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+        const debt = await queryRunner.manager.findOne(OldDebt, { where: { id } });
+        if (!debt) throw new NotFoundException('Deuda no encontrada');
+
+        // Find all payments/movements linked to this debt
+        const payments = await queryRunner.manager.find(Payment, { where: { oldDebtId: id } });
+
+        const capitals = await queryRunner.manager.find(Capital);
+        let capital = capitals.length > 0 ? capitals[0] : null;
+        if (!capital) capital = queryRunner.manager.create(Capital, { totalCapital: 0, operativePlante: 0, accumulatedProfit: 0 });
+
+        for (const payment of payments) {
+            // Reverse logic based on payment type
+            if (payment.type === 'PAYMENT') {
+                // Normal Payment (Abono)
+                // If Client paid (Money IN) -> We return money (Money OUT)
+                // If We paid Provider (Money OUT) -> We get money back (Money IN)
+                
+                if (debt.type === 'PROVIDER') {
+                    // We paid provider -> Money back IN
+                    capital.operativePlante = Number(capital.operativePlante) + Number(payment.amount);
+                } else {
+                    // Client paid us -> Money back OUT
+                     if (Number(capital.operativePlante) < Number(payment.amount)) {
+                         throw new BadRequestException('Fondos insuficientes para devolver los abonos de esta deuda');
+                     }
+                     capital.operativePlante = Number(capital.operativePlante) - Number(payment.amount);
+                }
+
+            } else if (payment.type === 'DEBT_INCREASE') {
+                // Debt Increase (Loan)
+                // If Client Loan (Money OUT) -> Money back IN
+                // If Provider Loan (Money IN) -> Money back OUT
+
+                if (debt.type === 'PROVIDER') {
+                    // Provider lent us money (Money IN) -> We return it (Money OUT)
+                     if (Number(capital.operativePlante) < Number(payment.amount)) {
+                         throw new BadRequestException('Fondos insuficientes para devolver el préstamo del proveedor');
+                     }
+                     capital.operativePlante = Number(capital.operativePlante) - Number(payment.amount);
+                } else {
+                    // We lent client money (Money OUT) -> Money back IN
+                    capital.operativePlante = Number(capital.operativePlante) + Number(payment.amount);
+                }
+            }
+            
+            // Delete payment
+            await queryRunner.manager.remove(payment);
+        }
+
+        // Delete Debt
+        await queryRunner.manager.remove(debt);
+        await queryRunner.manager.save(capital);
+
+        await queryRunner.commitTransaction();
+        return { message: 'Deuda eliminada correctamente' };
+
+    } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+    } finally {
+        await queryRunner.release();
+    }
+  }
+
   findAll() {
     return this.oldDebtRepository.find({
         order: { createdAt: 'DESC' }

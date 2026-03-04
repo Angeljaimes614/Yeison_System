@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
 import { OldDebtsService } from './old-debts.service';
 
 @Controller('old-debts')
@@ -18,6 +18,11 @@ export class OldDebtsController {
   @Post('increase')
   increase(@Body() dto: { debtId: string; amount: number; userId: string }) {
     return this.oldDebtsService.increase(dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.oldDebtsService.remove(id);
   }
 
   @Get()
