@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { salesService, purchasesService, paymentsService, oldDebtsService } from '../api/services';
-import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock, PlusCircle, History, RotateCcw } from 'lucide-react';
+import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock, PlusCircle, History, RotateCcw, Trash2 } from 'lucide-react';
 
 const Debts = () => {
   const { user } = useAuth();
@@ -204,6 +204,18 @@ const Debts = () => {
       }
   };
 
+  const handleDeleteDebt = async (tx: any) => {
+      if (!window.confirm('¿ELIMINAR DEUDA COMPLETA?\n\nEsta acción borrará la deuda y reversará TODOS los abonos y préstamos asociados.\n\nEl dinero de los abonos será devuelto/retirado de la caja.\n\n¿Estás seguro?')) return;
+      
+      try {
+          await oldDebtsService.remove(tx.id);
+          alert('Deuda eliminada correctamente');
+          loadData();
+      } catch (error: any) {
+          alert('Error: ' + (error.response?.data?.message || 'Error al eliminar'));
+      }
+  };
+
   const renderTable = (transactions: any[], isPayable: boolean) => (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="overflow-x-auto">
@@ -282,6 +294,15 @@ const Debts = () => {
                   >
                     <History className="h-3 w-3" />
                   </button>
+                  {tx.type === 'OLD_DEBT' && (
+                    <button
+                        onClick={() => handleDeleteDebt(tx)}
+                        className="inline-flex items-center px-3 py-1 border border-red-300 text-xs font-medium rounded shadow-sm text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none"
+                        title="Eliminar Deuda Completa"
+                    >
+                        <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
                 </td>
               </tr>
              );
