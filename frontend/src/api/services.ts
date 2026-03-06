@@ -53,11 +53,15 @@ export const currenciesService = {
 export const providersService = {
   findAll: () => api.get('/providers'),
   create: (data: any) => api.post('/providers', data),
+  update: (id: string, data: any) => api.patch(`/providers/${id}`, data),
+  remove: (id: string) => api.delete(`/providers/${id}`),
 };
 
 export const clientsService = {
   findAll: () => api.get('/clients'),
   create: (data: any) => api.post('/clients', data),
+  update: (id: string, data: any) => api.patch(`/clients/${id}`, data),
+  remove: (id: string) => api.delete(`/clients/${id}`),
 };
 
 export const expensesService = {

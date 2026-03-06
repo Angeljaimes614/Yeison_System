@@ -11,6 +11,8 @@ import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Investments from './pages/Investments';
 import Debts from './pages/Debts';
+import Clients from './pages/Clients';
+import Providers from './pages/Providers';
 import Settings from './pages/Settings';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -90,6 +92,18 @@ function App() {
             <Route path="settings" element={
                <RoleRoute roles={['admin', 'supervisor', 'cajero']}>
                  <Settings />
+               </RoleRoute>
+            } />
+            
+            <Route path="clients" element={
+               <RoleRoute roles={['admin', 'supervisor']}>
+                 <Clients />
+               </RoleRoute>
+            } />
+            
+            <Route path="providers" element={
+               <RoleRoute roles={['admin', 'supervisor']}>
+                 <Providers />
                </RoleRoute>
             } />
             

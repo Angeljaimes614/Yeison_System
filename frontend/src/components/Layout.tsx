@@ -1,21 +1,22 @@
 import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  ArrowRightLeft, 
-  Wallet, 
-  Package, 
-  DollarSign, 
-  FileText, 
-  LogOut, 
-  Menu,
-  X,
-  Users,
-  TrendingUp,
-  Clock,
-  Settings as SettingsIcon
-} from 'lucide-react';
+import { LayoutDashboard, Repeat, Package, Wallet, Users, Settings, Building2, Coins, TrendingUp, UserCircle, Truck, LogOut, Menu, X } from 'lucide-react';
+
+const allNavItems = [
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'cajero'] },
+  { name: 'Operaciones', path: '/operations', icon: Repeat, roles: ['admin', 'supervisor', 'cajero'] },
+  { name: 'Inventario Global', path: '/inventory', icon: Package, roles: ['admin', 'supervisor'] },
+  { name: 'Cartera y Deudas', path: '/debts', icon: Wallet, roles: ['admin', 'supervisor', 'cajero'] },
+  { name: 'Clientes', path: '/clients', icon: UserCircle, roles: ['admin', 'supervisor'] },
+  { name: 'Proveedores', path: '/providers', icon: Truck, roles: ['admin', 'supervisor'] },
+  { name: 'Finanzas', path: '/finance', icon: Coins, roles: ['admin'] },
+  { name: 'Inversiones', path: '/investments', icon: TrendingUp, roles: ['admin', 'investor'] },
+  { name: 'Usuarios', path: '/users', icon: Users, roles: ['admin'] },
+  { name: 'Sucursales', path: '/branches', icon: Building2, roles: ['admin'] },
+  { name: 'Divisas', path: '/currencies', icon: Coins, roles: ['admin'] },
+  { name: 'Configuración', path: '/settings', icon: Settings, roles: ['admin'] },
+];
 
 const Layout = () => {
   const { user, logout } = useAuth();
@@ -27,18 +28,6 @@ const Layout = () => {
     logout();
     navigate('/login');
   };
-
-  // Define all possible items
-  const allNavItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'cajero'] },
-    { name: 'Operaciones', path: '/operations', icon: ArrowRightLeft, roles: ['admin', 'supervisor', 'cajero'] },
-    { name: 'Cartera (Deudas)', path: '/debts', icon: Clock, roles: ['admin', 'supervisor', 'cajero'] },
-    { name: 'Inversiones', path: '/investments', icon: TrendingUp, roles: ['admin', 'supervisor', 'cajero', 'inversionista'] },
-    { name: 'Configuración', path: '/settings', icon: SettingsIcon, roles: ['admin', 'supervisor', 'cajero'] },
-    { name: 'Balance Financiero YM', path: '/finance', icon: Wallet, roles: ['admin', 'supervisor', 'cajero'] },
-    { name: 'Reportes', path: '/reports', icon: FileText, roles: ['admin', 'supervisor', 'cajero'] },
-    { name: 'Usuarios', path: '/users', icon: Users, roles: ['admin'] },
-  ];
 
   // Filter based on user role
   const navItems = allNavItems.filter(item => {
