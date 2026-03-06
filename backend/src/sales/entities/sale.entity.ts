@@ -80,7 +80,7 @@ export class Sale {
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'createdById' })
-  createdBy: User;
+  createdBy?: User;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -17,14 +17,14 @@ export class Purchase {
 
   @ManyToOne(() => Branch)
   @JoinColumn({ name: 'branchId' })
-  branch: Branch;
+  branch?: Branch;
 
   @Column({ nullable: true })
   providerId: string;
 
   @ManyToOne(() => Provider, { nullable: true })
   @JoinColumn({ name: 'providerId' })
-  provider: Provider;
+  provider?: Provider;
 
   @Column({ nullable: true })
   providerName: string;
@@ -34,7 +34,7 @@ export class Purchase {
 
   @ManyToOne(() => Currency)
   @JoinColumn({ name: 'currencyId' })
-  currency: Currency;
+  currency?: Currency;
 
   @Column('decimal', { precision: 16, scale: 2 })
   amount: number; // Monto en moneda extranjera
@@ -71,7 +71,7 @@ export class Purchase {
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'createdById' })
-  createdBy: User;
+  createdBy?: User;
 
   @CreateDateColumn()
   createdAt: Date;
