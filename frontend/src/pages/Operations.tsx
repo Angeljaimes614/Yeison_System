@@ -60,31 +60,39 @@ const Operations = () => {
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
+    // Use individual try-catch blocks to prevent total failure
     try {
-      setLoading(true);
-      const promises = [
-        currenciesService.findAll(),
-        providersService.findAll(),
-        clientsService.findAll(),
-        inventoryService.findGlobal()
-      ];
+      try {
+        const res = await currenciesService.findAll();
+        setCurrencies(Array.isArray(res?.data) ? res.data : []);
+      } catch (e) { console.error(e); setCurrencies([]); }
+
+      try {
+        const res = await providersService.findAll();
+        console.log('Providers loaded:', res);
+        setProviders(Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []));
+      } catch (e) { console.error('Provider Error', e); setProviders([]); }
+
+      try {
+        const res = await clientsService.findAll();
+        console.log('Clients loaded:', res);
+        setClients(Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []));
+      } catch (e) { console.error('Client Error', e); setClients([]); }
+
+      try {
+        const res = await inventoryService.findGlobal();
+        setGlobalInventory(Array.isArray(res?.data) ? res.data : []);
+      } catch (e) { console.error(e); setGlobalInventory([]); }
 
       if (!user?.branchId) {
-        promises.push(branchesService.findAll());
-      }
-
-      const results = await Promise.all(promises);
-      
-      setCurrencies(results[0]?.data || []);
-      setProviders(results[1]?.data || []);
-      setClients(results[2]?.data || []);
-      setGlobalInventory(results[3]?.data || []);
-      
-      if (!user?.branchId && results[4]) {
-        setBranches(results[4]?.data || []);
+        try {
+          const res = await branchesService.findAll();
+          setBranches(Array.isArray(res?.data) ? res.data : []);
+        } catch (e) { console.error(e); setBranches([]); }
       }
     } catch (err) {
-      console.error('Error loading form data', err);
+      console.error('Critical Error in loadData', err);
       setError('Error cargando datos iniciales. Verifica tu conexión.');
     } finally {
       setLoading(false);
@@ -94,24 +102,63 @@ const Operations = () => {
   const totalPesos = (Number(amount) || 0) * (Number(rate) || 0);
   const pendingBalance = totalPesos - (Number(paidAmount) || 0);
 
-  // Helper to find average cost
+  // Helper to find average cost safely
   const getAverageCost = (currId: string) => {
-    const item = globalInventory.find((i: any) => i.currencyId === currId);
+    if (!Array.isArray(globalInventory)) return 0;
+    const item = globalInventory.find((i: any) => i && i.currencyId === currId);
     return item ? Number(item.averageCost) : 0;
   };
 
-  const handleEntityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value;
-      setEntityId(val);
-      
-      // Try to find matching ID automatically
-      if (activeTab === 'purchase') {
-          const found = providers.find((p: any) => p.name === val);
-          setSelectedEntityId(found ? found.id : '');
-      } else {
-          const found = clients.find((c: any) => c.name === val);
-          setSelectedEntityId(found ? found.id : '');
+  const handleEntitySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === 'new_entity') {
+      setSelectedEntityId('');
+      setEntityId('');
+      return;
+    }
+    
+    // Find the entity object
+    let found = null;
+    const list = activeTab === 'purchase' ? providers : clients;
+    
+    if (Array.isArray(list)) {
+      for(let i=0; i<list.length; i++) {
+        if(list[i] && list[i].id === val) {
+          found = list[i];
+          break;
+        }
       }
+    }
+    
+    if (found) {
+      setSelectedEntityId(found.id);
+      setEntityId(found.name);
+    } else {
+      setSelectedEntityId('');
+      setEntityId('');
+    }
+  };
+
+  // --- SAFE RENDER HELPERS (NO .MAP IN JSX) ---
+
+  const renderEntityOptions = () => {
+    const items = [];
+    items.push(<option key="default" value="">-- Seleccione un {activeTab === 'purchase' ? 'Proveedor' : 'Cliente'} --</option>);
+    
+    const list = activeTab === 'purchase' ? providers : clients;
+    
+    if (Array.isArray(list)) {
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i];
+        if (item && item.id && item.name) {
+          items.push(<option key={item.id} value={item.id}>{item.name}</option>);
+        }
+      }
+    }
+    
+    items.push(<option key="new" value="new_entity">+ Registrar Nuevo (Escribir nombre)</option>);
+    
+    return items;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -121,7 +168,6 @@ const Operations = () => {
     setSuccess('');
 
     if (activeTab === 'exchange') {
-      // Exchange Logic
       if (!sourceCurrencyId || !targetCurrencyId || !sourceAmount || !targetAmount) {
          setError('Todos los campos son obligatorios para la conversión.');
          setLoading(false);
@@ -144,7 +190,7 @@ const Operations = () => {
         setSuccess('Conversión realizada con éxito (Valor trasladado).');
         setSourceAmount('');
         setTargetAmount('');
-        loadData(); // Refresh inventory
+        loadData(); 
       } catch (err: any) {
         console.error(err);
         setError(err.response?.data?.message || 'Error en la conversión');
@@ -154,7 +200,6 @@ const Operations = () => {
       return;
     }
 
-    // Purchase/Sale Logic
     if (!selectedBranchId) {
       setError('Debes seleccionar una sucursal para operar.');
       setLoading(false);
@@ -193,11 +238,10 @@ const Operations = () => {
       
       setAmount('');
       setPaidAmount('');
-      // Keep entityId? Usually better to clear for next customer
       setEntityId('');
       setSelectedEntityId('');
       
-      loadData(); // Refresh inventory
+      loadData();
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Error al procesar la operación');
@@ -205,6 +249,97 @@ const Operations = () => {
       setLoading(false);
     }
   };
+
+  // --- SAFE RENDER HELPERS (NO .MAP IN JSX) ---
+
+  const renderCurrencyButtons = () => {
+    const items = [];
+    if (Array.isArray(currencies)) {
+      for (let i = 0; i < currencies.length; i++) {
+        const curr = currencies[i];
+        if (!curr || !curr.id) continue;
+        
+        items.push(
+          <button
+            key={curr.id}
+            type="button"
+            disabled={loading}
+            onClick={() => setCurrencyId(curr.id)}
+            className={`p-3 rounded-lg border text-center transition-all ${
+              currencyId === curr.id
+                ? activeTab === 'purchase' ? 'border-blue-500 bg-blue-50 text-blue-700 font-bold' : 'border-green-500 bg-green-50 text-green-700 font-bold'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            {curr.code || '???'}
+          </button>
+        );
+      }
+    }
+    
+    if (items.length === 0) {
+      return <div className="text-gray-500 text-sm">No hay monedas disponibles.</div>;
+    }
+    
+    return <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{items}</div>;
+  };
+
+  const renderCurrencyOptions = () => {
+    const items = [];
+    items.push(<option key="default" value="">-- Seleccione --</option>);
+    
+    if (Array.isArray(currencies)) {
+      for (let i = 0; i < currencies.length; i++) {
+        const curr = currencies[i];
+        if (curr && curr.id) {
+          items.push(<option key={curr.id} value={curr.id}>{curr.code}</option>);
+        }
+      }
+    }
+    return items;
+  };
+
+  const renderBranchOptions = () => {
+    const items = [];
+    items.push(<option key="default" value="">-- Seleccione una Sucursal --</option>);
+    
+    if (Array.isArray(branches)) {
+      for (let i = 0; i < branches.length; i++) {
+        const b = branches[i];
+        if (b && b.id) {
+          items.push(<option key={b.id} value={b.id}>{b.name}</option>);
+        }
+      }
+    }
+    return items;
+  };
+
+  const renderDataListOptions = () => {
+    const items = [];
+    
+    if (activeTab === 'purchase') {
+      if (Array.isArray(providers)) {
+        for (let i = 0; i < providers.length; i++) {
+          const p = providers[i];
+          if (p && p.name) {
+            items.push(<option key={p.id || `prov-${i}`} value={p.name} />);
+          }
+        }
+      }
+    } else {
+      if (Array.isArray(clients)) {
+        for (let i = 0; i < clients.length; i++) {
+          const c = clients[i];
+          if (c && c.name) {
+            items.push(<option key={c.id || `cli-${i}`} value={c.name} />);
+          }
+        }
+      }
+    }
+    return items;
+  };
+
+  // --- END HELPERS ---
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -222,10 +357,7 @@ const Operations = () => {
             value={selectedBranchId}
             onChange={(e) => setSelectedBranchId(e.target.value)}
           >
-            <option value="">-- Seleccione una Sucursal --</option>
-            {Array.isArray(branches) && branches.map(b => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
+            {renderBranchOptions()}
           </select>
         </div>
       )}
@@ -330,8 +462,7 @@ const Operations = () => {
                       value={sourceCurrencyId}
                       onChange={(e) => setSourceCurrencyId(e.target.value)}
                     >
-                      <option value="">-- Seleccione --</option>
-                      {currencies.map((c: any) => <option key={c.id} value={c.id}>{c.code}</option>)}
+                      {renderCurrencyOptions()}
                     </select>
                  </div>
                  <div>
@@ -341,8 +472,7 @@ const Operations = () => {
                       value={targetCurrencyId}
                       onChange={(e) => setTargetCurrencyId(e.target.value)}
                     >
-                      <option value="">-- Seleccione --</option>
-                      {currencies.map((c: any) => <option key={c.id} value={c.id}>{c.code}</option>)}
+                      {renderCurrencyOptions()}
                     </select>
                  </div>
 
@@ -398,22 +528,7 @@ const Operations = () => {
                 {/* Currency Selection */}
                 <div className="col-span-1 md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Moneda</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {Array.isArray(currencies) && currencies.map((curr) => (
-                      <button
-                        key={curr.id}
-                        type="button"
-                        onClick={() => setCurrencyId(curr.id)}
-                        className={`p-3 rounded-lg border text-center transition-all ${
-                          currencyId === curr.id
-                            ? activeTab === 'purchase' ? 'border-blue-500 bg-blue-50 text-blue-700 font-bold' : 'border-green-500 bg-green-50 text-green-700 font-bold'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        {curr.code}
-                      </button>
-                    ))}
-                  </div>
+                  {renderCurrencyButtons()}
                 </div>
 
                 {/* Entity Selection (Provider/Client) */}
@@ -421,26 +536,48 @@ const Operations = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nombre del {activeTab === 'purchase' ? 'Proveedor' : 'Cliente'}
                   </label>
-                  <div className="relative">
+                  
+                  {/* Mode Selector: Existing vs New */}
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedEntityId(''); setEntityId(''); }}
+                      className={`text-xs px-2 py-1 rounded border ${!selectedEntityId ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200'}`}
+                    >
+                      Escribir Nombre Nuevo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedEntityId('PENDING_SELECTION'); setEntityId(''); }}
+                      className={`text-xs px-2 py-1 rounded border ${selectedEntityId ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200'}`}
+                    >
+                      Seleccionar Existente
+                    </button>
+                  </div>
+
+                  {selectedEntityId || selectedEntityId === 'PENDING_SELECTION' ? (
+                     <select
+                       className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3"
+                       value={selectedEntityId === 'PENDING_SELECTION' ? '' : selectedEntityId}
+                       onChange={handleEntitySelect}
+                     >
+                       {renderEntityOptions()}
+                     </select>
+                  ) : (
                       <input
                         type="text"
-                        list="entity-list"
+                        autoComplete="off"
                         className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3"
-                        placeholder={`Buscar o escribir nombre...`}
+                        placeholder={`Escriba el nombre del nuevo ${activeTab === 'purchase' ? 'proveedor' : 'cliente'}...`}
                         value={entityId}
-                        onChange={handleEntityChange}
+                        onChange={(e) => setEntityId(e.target.value)}
                       />
-                      <datalist id="entity-list">
-                          {activeTab === 'purchase' 
-                              ? (Array.isArray(providers) ? providers.map((p: any) => <option key={p.id} value={p.name} />) : [])
-                              : (Array.isArray(clients) ? clients.map((c: any) => <option key={c.id} value={c.name} />) : [])
-                          }
-                      </datalist>
-                  </div>
-                  {selectedEntityId && (
+                  )}
+                  
+                  {selectedEntityId && selectedEntityId !== 'PENDING_SELECTION' && (
                       <p className="text-xs text-green-600 mt-1 flex items-center">
                           <Check className="h-3 w-3 mr-1" />
-                          {activeTab === 'purchase' ? 'Proveedor' : 'Cliente'} identificado en el sistema.
+                          {activeTab === 'purchase' ? 'Proveedor' : 'Cliente'} vinculado correctamente.
                       </p>
                   )}
                 </div>
