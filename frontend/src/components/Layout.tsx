@@ -1,17 +1,18 @@
 import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Repeat, Package, Wallet, Users, Settings, Building2, Coins, TrendingUp, UserCircle, Truck, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Repeat, Package, Wallet, Users, Settings, Building2, Coins, TrendingUp, UserCircle, Truck, FileText, LogOut, Menu, X } from 'lucide-react';
 
 const allNavItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'cajero'] },
   { name: 'Operaciones', path: '/operations', icon: Repeat, roles: ['admin', 'supervisor', 'cajero'] },
-  { name: 'Inventario Global', path: '/inventory', icon: Package, roles: ['admin', 'supervisor'] },
   { name: 'Cartera y Deudas', path: '/debts', icon: Wallet, roles: ['admin', 'supervisor', 'cajero'] },
   { name: 'Clientes', path: '/clients', icon: UserCircle, roles: ['admin', 'supervisor'] },
   { name: 'Proveedores', path: '/providers', icon: Truck, roles: ['admin', 'supervisor'] },
-  { name: 'Finanzas', path: '/finance', icon: Coins, roles: ['admin'] },
   { name: 'Inversiones', path: '/investments', icon: TrendingUp, roles: ['admin', 'investor'] },
+  { name: 'Finanzas', path: '/finance', icon: Coins, roles: ['admin'] },
+  { name: 'Reportes', path: '/reports', icon: FileText, roles: ['admin', 'supervisor'] },
+  { name: 'Inventario Global', path: '/inventory', icon: Package, roles: ['admin', 'supervisor'] },
   { name: 'Usuarios', path: '/users', icon: Users, roles: ['admin'] },
   { name: 'Sucursales', path: '/branches', icon: Building2, roles: ['admin'] },
   { name: 'Divisas', path: '/currencies', icon: Coins, roles: ['admin'] },

@@ -22,6 +22,11 @@ export class ProvidersController {
     return this.providersService.findOne(id);
   }
 
+  @Get(':id/transactions')
+  getTransactions(@Param('id') id: string) {
+    return this.providersService.getTransactions(id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateProviderDto: UpdateProviderDto) {
     return this.providersService.update(id, updateProviderDto);

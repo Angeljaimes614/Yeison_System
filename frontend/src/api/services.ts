@@ -55,6 +55,7 @@ export const providersService = {
   create: (data: any) => api.post('/providers', data),
   update: (id: string, data: any) => api.patch(`/providers/${id}`, data),
   remove: (id: string) => api.delete(`/providers/${id}`),
+  getTransactions: (id: string) => api.get(`/providers/${id}/transactions`),
 };
 
 export const clientsService = {
@@ -62,6 +63,7 @@ export const clientsService = {
   create: (data: any) => api.post('/clients', data),
   update: (id: string, data: any) => api.patch(`/clients/${id}`, data),
   remove: (id: string) => api.delete(`/clients/${id}`),
+  getTransactions: (id: string) => api.get(`/clients/${id}/transactions`),
 };
 
 export const expensesService = {

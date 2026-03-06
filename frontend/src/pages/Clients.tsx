@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { clientsService } from '../api/services';
-import { UserPlus, Edit2, Trash2, Check, AlertCircle, Search } from 'lucide-react';
+import { clientsService, salesService } from '../api/services';
+import { UserPlus, Edit2, Trash2, Check, AlertCircle, Search, FileText, X, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Clients = () => {
+  const { user } = useAuth();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -10,6 +12,12 @@ const Clients = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // History Modal State
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -30,6 +38,32 @@ const Clients = () => {
       setError('Error al cargar clientes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHistory = async (client: any) => {
+    setSelectedClient(client);
+    setIsHistoryOpen(true);
+    setHistoryLoading(true);
+    try {
+        const res = await clientsService.getTransactions(client.id);
+        setTransactions(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+        console.error(err);
+        alert('Error al cargar historial');
+    } finally {
+        setHistoryLoading(false);
+    }
+  };
+
+  const handleReverseSale = async (saleId: string) => {
+    if (!window.confirm('¿Estás seguro de ANULAR esta venta? Esto devolverá el inventario y anulará la deuda.')) return;
+    try {
+        await salesService.reverse(saleId, { userId: user?.id || '', reason: 'Anulación manual desde historial de cliente' });
+        alert('Venta anulada correctamente');
+        if (selectedClient) loadHistory(selectedClient); // Reload history
+    } catch (err: any) {
+        alert(err.response?.data?.message || 'Error al anular venta');
     }
   };
 
@@ -146,6 +180,9 @@ const Clients = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-gray-500">{c.phone || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-500">{c.email || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onClick={() => loadHistory(c)} className="text-blue-600 hover:text-blue-900 mr-4" title="Ver Historial">
+                        <FileText className="h-4 w-4" />
+                    </button>
                     <button onClick={() => handleOpenModal(c)} className="text-indigo-600 hover:text-indigo-900 mr-4">
                         <Edit2 className="h-4 w-4" />
                     </button>
@@ -166,7 +203,7 @@ const Clients = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Edit/Create Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
@@ -222,6 +259,104 @@ const Clients = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {isHistoryOpen && selectedClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6 h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">Historial de: {selectedClient.name}</h2>
+                        <p className="text-sm text-gray-500">Transacciones y movimientos</p>
+                    </div>
+                    <button onClick={() => setIsHistoryOpen(false)} className="text-gray-500 hover:text-gray-700">
+                        <X className="h-6 w-6" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                    {historyLoading ? (
+                        <div className="flex justify-center items-center h-full">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                    ) : transactions.length > 0 ? (
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Detalle</th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {transactions.map((tx) => (
+                                    <tr key={tx.id} className={tx.isReversed ? 'bg-red-50' : ''}>
+                                        <td className="px-4 py-3 text-sm text-gray-900">
+                                            {new Date(tx.date).toLocaleDateString()} <br/>
+                                            <span className="text-xs text-gray-500">{new Date(tx.date).toLocaleTimeString()}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                tx.isReversed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                            }`}>
+                                                {tx.isReversed ? 'ANULADO' : tx.type}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">
+                                            {Number(tx.amount).toLocaleString()} {tx.currency} @ {Number(tx.rate).toLocaleString()}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right font-medium">
+                                            $ {Number(tx.totalPesos).toLocaleString()}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right text-red-600 font-bold">
+                                            {Number(tx.pendingBalance) > 0 ? `$ ${Number(tx.pendingBalance).toLocaleString()}` : '-'}
+                                        </td>
+                                        <td className="px-4 py-3 text-center text-sm">
+                                            {tx.isReversed ? (
+                                                <span className="text-red-600 text-xs">Anulado por: {tx.reversalReason}</span>
+                                            ) : Number(tx.pendingBalance) > 0 ? (
+                                                <span className="text-yellow-600 font-bold">Pendiente</span>
+                                            ) : (
+                                                <span className="text-green-600 font-bold">Pagado</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {!tx.isReversed && (
+                                                <button 
+                                                    onClick={() => handleReverseSale(tx.id)}
+                                                    className="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded hover:bg-red-50"
+                                                >
+                                                    Anular
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-10 text-gray-500">
+                            <AlertTriangle className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+                            Este cliente no tiene movimientos registrados.
+                        </div>
+                    )}
+                </div>
+                
+                <div className="mt-4 pt-4 border-t flex justify-end">
+                    <button 
+                        onClick={() => setIsHistoryOpen(false)}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    >
+                        Cerrar
+                    </button>
+                </div>
+            </div>
         </div>
       )}
     </div>
