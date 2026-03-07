@@ -26,6 +26,7 @@ export const capitalService = {
 export const inventoryService = {
   findAll: () => api.get('/inventory'),
   findGlobal: () => api.get('/inventory/global'),
+  adjustGlobal: (data: { currencyId: string, quantity: number, averageCost: number }) => api.post('/inventory/global/adjust', data),
 };
 
 export const exchangesService = {

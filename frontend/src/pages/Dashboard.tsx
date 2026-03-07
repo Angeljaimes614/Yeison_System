@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { capitalService, inventoryService, currenciesService } from '../api/services';
-import { DollarSign, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, Coins } from 'lucide-react';
+import { DollarSign, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, Coins, Edit3, X, Save } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -12,6 +12,13 @@ const Dashboard = () => {
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  // Adjustment Modal State
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<any | null>(null);
+  const [adjustQuantity, setAdjustQuantity] = useState('');
+  const [adjustCost, setAdjustCost] = useState('');
+  const [adjustLoading, setAdjustLoading] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -52,6 +59,50 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [user]);
 
+  const handleOpenAdjust = (currency: any, currentQty: number, currentCost: number) => {
+      if (user?.role !== 'admin') return;
+      setSelectedCurrency(currency);
+      setAdjustQuantity(currentQty.toString());
+      // Find current average cost from inventory array
+      const invItem = inventory.find((i: any) => i.currencyId === currency.id);
+      setAdjustCost(invItem ? invItem.averageCost : '0');
+      setIsAdjustModalOpen(true);
+  };
+
+  const handleSaveAdjustment = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedCurrency) return;
+
+      const newQty = parseFloat(adjustQuantity);
+      const newCost = parseFloat(adjustCost);
+
+      if (isNaN(newQty) || isNaN(newCost)) {
+          alert('Por favor ingrese valores numéricos válidos');
+          return;
+      }
+
+      if (!window.confirm(`¿Seguro que deseas ajustar el inventario de ${selectedCurrency.code} a ${newQty}? Esta acción es irreversible.`)) {
+          return;
+      }
+
+      setAdjustLoading(true);
+      try {
+          await inventoryService.adjustGlobal({
+              currencyId: selectedCurrency.id,
+              quantity: newQty,
+              averageCost: newCost
+          });
+          alert('Inventario ajustado correctamente');
+          setIsAdjustModalOpen(false);
+          fetchData(); // Reload data
+      } catch (err) {
+          console.error(err);
+          alert('Error al ajustar inventario');
+      } finally {
+          setAdjustLoading(false);
+      }
+  };
+
   if (loading && !capital) {
     return <div className="p-8 text-center">Cargando dashboard...</div>;
   }
@@ -76,6 +127,7 @@ const Dashboard = () => {
 
   // Map dynamic currencies
   const currencyCards = currencies.map((curr: any) => ({
+      ...curr, // Pass full object for adjustment
       code: curr.code,
       label: `Inventario ${curr.code}`,
       value: inventoryByCurrency[curr.code] || 0,
@@ -107,22 +159,23 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* Debug Info (Temporary) */}
-      <div className="bg-gray-100 p-4 rounded text-xs font-mono mb-4 overflow-auto max-h-60 border border-red-300 hidden">
-        <h3 className="font-bold text-red-600 mb-2">DEBUG INFO (Si ves esto, envíame una foto)</h3>
-        <p><strong>Role:</strong> {user?.role}</p>
-        <p><strong>Branch ID:</strong> {user?.branchId || 'Ninguna (Global)'}</p>
-        <p><strong>Inventory Count:</strong> {inventory.length}</p>
-        <p><strong>Capital:</strong> {JSON.stringify(capital)}</p>
-        <p><strong>Inventory Items (First 5):</strong></p>
-        <pre>{JSON.stringify(inventory.slice(0, 5), null, 2)}</pre>
-      </div>
-
       {/* Resumen General de Balances por Moneda */}
       <h2 className="text-xl font-bold text-gray-800 mt-4 mb-4">Resumen de Balances</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {displayCurrencies.map((curr) => (
-          <div key={curr.code} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+          <div key={curr.code} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow relative group">
+            
+            {/* Admin Edit Button for Currencies */}
+            {user?.role === 'admin' && curr.code !== 'COP' && curr.code !== 'PROFIT' && (
+                <button 
+                    onClick={() => handleOpenAdjust(curr, curr.value, 0)}
+                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Ajustar Inventario Manualmente"
+                >
+                    <Edit3 className="h-4 w-4" />
+                </button>
+            )}
+
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">{curr.label}</p>
@@ -157,6 +210,69 @@ const Dashboard = () => {
            Nueva Venta
          </button>
       </div>
+
+      {/* Adjustment Modal */}
+      {isAdjustModalOpen && selectedCurrency && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-bold text-gray-800">Ajustar Inventario: {selectedCurrency.code}</h3>
+                      <button onClick={() => setIsAdjustModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                          <X className="h-6 w-6" />
+                      </button>
+                  </div>
+                  
+                  <div className="mb-4 bg-yellow-50 p-3 rounded text-sm text-yellow-800 border border-yellow-200">
+                      <strong>Advertencia:</strong> Estás modificando directamente la cantidad disponible. Esto no genera movimientos de caja ni afecta la utilidad. Úsalo solo para correcciones.
+                  </div>
+
+                  <form onSubmit={handleSaveAdjustment}>
+                      <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Cantidad Real</label>
+                          <input 
+                              type="number" 
+                              step="any"
+                              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500"
+                              value={adjustQuantity}
+                              onChange={(e) => setAdjustQuantity(e.target.value)}
+                              required
+                          />
+                      </div>
+
+                      <div className="mb-6">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Costo Promedio (COP) <span className="text-gray-400 text-xs">(Opcional, dejar igual si no cambia)</span></label>
+                          <input 
+                              type="number" 
+                              step="any"
+                              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500"
+                              value={adjustCost}
+                              onChange={(e) => setAdjustCost(e.target.value)}
+                              required
+                          />
+                      </div>
+
+                      <div className="flex justify-end gap-3">
+                          <button 
+                              type="button"
+                              onClick={() => setIsAdjustModalOpen(false)}
+                              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                          >
+                              Cancelar
+                          </button>
+                          <button 
+                              type="submit"
+                              disabled={adjustLoading}
+                              className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                          >
+                              <Save className="h-4 w-4 mr-2" />
+                              {adjustLoading ? 'Guardando...' : 'Guardar Ajuste'}
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
+
     </div>
   );
 };

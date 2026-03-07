@@ -126,6 +126,26 @@ export class InventoryService {
     });
   }
 
+  // --- MANUAL ADJUSTMENT (ADMIN ONLY) ---
+  async updateGlobalInventory(currencyId: string, quantity: number, averageCost: number) {
+      let globalInv = await this.globalInventoryRepository.findOne({ where: { currencyId } });
+      
+      if (!globalInv) {
+          globalInv = this.globalInventoryRepository.create({
+              currencyId,
+              totalQuantity: quantity,
+              averageCost: averageCost,
+              totalCostCOP: quantity * averageCost
+          });
+      } else {
+          globalInv.totalQuantity = quantity;
+          globalInv.averageCost = averageCost;
+          globalInv.totalCostCOP = quantity * averageCost;
+      }
+      
+      return this.globalInventoryRepository.save(globalInv);
+  }
+
   // Deprecated or mapped to global
   async findByBranchAndCurrency(branchId: string, currencyId: string) {
     return this.findGlobalByCurrency(currencyId);

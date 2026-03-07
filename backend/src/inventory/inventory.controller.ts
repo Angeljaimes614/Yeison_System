@@ -17,6 +17,11 @@ export class InventoryController {
     return this.inventoryService.findAllGlobal();
   }
 
+  @Post('global/adjust')
+  adjustGlobal(@Body() body: { currencyId: string; quantity: number; averageCost: number }) {
+      return this.inventoryService.updateGlobalInventory(body.currencyId, body.quantity, body.averageCost);
+  }
+
   @Get()
   findAll() {
     return this.inventoryService.findAll();
