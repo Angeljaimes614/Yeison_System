@@ -147,6 +147,42 @@ export class CapitalService {
     return this.capitalRepository.save(capital);
   }
 
+  // --- MANUAL ADJUSTMENT (ADMIN ONLY) ---
+  async adjustOperativeCash(newAmount: number, userId: string) {
+      const capital = await this.getGlobalCapital();
+      const currentAmount = Number(capital.operativePlante);
+      const diff = newAmount - currentAmount;
+
+      if (diff === 0) return capital;
+
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+          // Update Capital
+          capital.operativePlante = newAmount;
+          await queryRunner.manager.save(Capital, capital);
+
+          // Log Movement
+          const movement = queryRunner.manager.create(CapitalMovement, {
+              type: diff > 0 ? 'INJECTION' : 'WITHDRAWAL_CAPITAL', // Treat as capital adjustment
+              amount: Math.abs(diff),
+              description: `Ajuste manual de Caja Operativa (Admin). Anterior: ${currentAmount}, Nuevo: ${newAmount}`,
+              createdById: userId
+          });
+          await queryRunner.manager.save(CapitalMovement, movement);
+
+          await queryRunner.commitTransaction();
+          return capital;
+      } catch (err) {
+          await queryRunner.rollbackTransaction();
+          throw err;
+      } finally {
+          await queryRunner.release();
+      }
+  }
+
   async remove(id: string) {
     const capital = await this.findOne(id);
     return this.capitalRepository.remove(capital);

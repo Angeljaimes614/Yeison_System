@@ -20,6 +20,7 @@ export const capitalService = {
   // Financial Movements
   registerMovement: (data: { type: 'INJECTION' | 'WITHDRAWAL_PROFIT' | 'WITHDRAWAL_CAPITAL', amount: number, description: string, userId: string }) => 
     api.post('/capital/movements', data),
+  adjustCash: (data: { amount: number, userId: string }) => api.post('/capital/adjust', data),
   getMovements: () => api.get('/capital/movements'),
 };
 

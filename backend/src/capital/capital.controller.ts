@@ -12,6 +12,11 @@ export class CapitalController {
     return this.capitalService.registerMovement(body.type, body.amount, body.description, body.userId);
   }
 
+  @Post('adjust')
+  adjustCash(@Body() body: { amount: number; userId: string }) {
+      return this.capitalService.adjustOperativeCash(body.amount, body.userId);
+  }
+
   @Get('movements')
   getMovements() {
     return this.capitalService.getMovements();

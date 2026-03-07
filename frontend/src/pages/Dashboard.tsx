@@ -59,13 +59,18 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [user]);
 
-  const handleOpenAdjust = (currency: any, currentQty: number, currentCost: number) => {
+  const handleOpenAdjust = (currency: any, currentQty: number) => {
       if (user?.role !== 'admin') return;
       setSelectedCurrency(currency);
       setAdjustQuantity(currentQty.toString());
-      // Find current average cost from inventory array
-      const invItem = inventory.find((i: any) => i.currencyId === currency.id);
-      setAdjustCost(invItem ? invItem.averageCost : '0');
+      
+      if (currency.code === 'COP') {
+          setAdjustCost('0'); // Not used for Cash
+      } else {
+          // Find current average cost from inventory array
+          const invItem = inventory.find((i: any) => i.currencyId === currency.id);
+          setAdjustCost(invItem ? invItem.averageCost : '0');
+      }
       setIsAdjustModalOpen(true);
   };
 
@@ -76,28 +81,42 @@ const Dashboard = () => {
       const newQty = parseFloat(adjustQuantity);
       const newCost = parseFloat(adjustCost);
 
-      if (isNaN(newQty) || isNaN(newCost)) {
-          alert('Por favor ingrese valores numéricos válidos');
+      if (isNaN(newQty)) {
+          alert('Por favor ingrese un valor válido');
           return;
       }
 
-      if (!window.confirm(`¿Seguro que deseas ajustar el inventario de ${selectedCurrency.code} a ${newQty}? Esta acción es irreversible.`)) {
+      const isCash = selectedCurrency.code === 'COP';
+      const confirmMsg = isCash 
+          ? `¿Seguro que deseas ajustar la CAJA OPERATIVA a $ ${newQty.toLocaleString()}?`
+          : `¿Seguro que deseas ajustar el inventario de ${selectedCurrency.code} a ${newQty}?`;
+
+      if (!window.confirm(`${confirmMsg} Esta acción es irreversible y quedará registrada.`)) {
           return;
       }
 
       setAdjustLoading(true);
       try {
-          await inventoryService.adjustGlobal({
-              currencyId: selectedCurrency.id,
-              quantity: newQty,
-              averageCost: newCost
-          });
-          alert('Inventario ajustado correctamente');
+          if (isCash) {
+              await capitalService.adjustCash({
+                  amount: newQty,
+                  userId: user?.id || ''
+              });
+              alert('Caja Operativa ajustada correctamente');
+          } else {
+              await inventoryService.adjustGlobal({
+                  currencyId: selectedCurrency.id,
+                  quantity: newQty,
+                  averageCost: newCost
+              });
+              alert('Inventario ajustado correctamente');
+          }
+          
           setIsAdjustModalOpen(false);
           fetchData(); // Reload data
-      } catch (err) {
+      } catch (err: any) {
           console.error(err);
-          alert('Error al ajustar inventario');
+          alert(err.response?.data?.message || 'Error al realizar el ajuste');
       } finally {
           setAdjustLoading(false);
       }
@@ -165,12 +184,12 @@ const Dashboard = () => {
         {displayCurrencies.map((curr) => (
           <div key={curr.code} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow relative group">
             
-            {/* Admin Edit Button for Currencies */}
-            {user?.role === 'admin' && curr.code !== 'COP' && curr.code !== 'PROFIT' && (
+            {/* Admin Edit Button for Currencies AND CASH (COP) */}
+            {user?.role === 'admin' && curr.code !== 'PROFIT' && (
                 <button 
-                    onClick={() => handleOpenAdjust(curr, curr.value, 0)}
+                    onClick={() => handleOpenAdjust(curr, curr.value)}
                     className="absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Ajustar Inventario Manualmente"
+                    title={curr.code === 'COP' ? "Ajustar Caja Manualmente" : "Ajustar Inventario Manualmente"}
                 >
                     <Edit3 className="h-4 w-4" />
                 </button>
@@ -216,19 +235,26 @@ const Dashboard = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
               <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
                   <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800">Ajustar Inventario: {selectedCurrency.code}</h3>
+                      <h3 className="text-xl font-bold text-gray-800">
+                          {selectedCurrency.code === 'COP' ? 'Ajustar Caja Operativa' : `Ajustar Inventario: ${selectedCurrency.code}`}
+                      </h3>
                       <button onClick={() => setIsAdjustModalOpen(false)} className="text-gray-500 hover:text-gray-700">
                           <X className="h-6 w-6" />
                       </button>
                   </div>
                   
                   <div className="mb-4 bg-yellow-50 p-3 rounded text-sm text-yellow-800 border border-yellow-200">
-                      <strong>Advertencia:</strong> Estás modificando directamente la cantidad disponible. Esto no genera movimientos de caja ni afecta la utilidad. Úsalo solo para correcciones.
+                      <strong>Advertencia:</strong> Estás modificando directamente el saldo real. 
+                      {selectedCurrency.code === 'COP' 
+                        ? ' Se creará un registro de "Ajuste Manual" para justificar la diferencia.' 
+                        : ' Esto no genera movimientos de caja ni afecta la utilidad.'}
                   </div>
 
                   <form onSubmit={handleSaveAdjustment}>
                       <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Cantidad Real</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                              {selectedCurrency.code === 'COP' ? 'Nuevo Saldo en Caja (COP)' : 'Nueva Cantidad Real'}
+                          </label>
                           <input 
                               type="number" 
                               step="any"
@@ -239,17 +265,19 @@ const Dashboard = () => {
                           />
                       </div>
 
-                      <div className="mb-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Costo Promedio (COP) <span className="text-gray-400 text-xs">(Opcional, dejar igual si no cambia)</span></label>
-                          <input 
-                              type="number" 
-                              step="any"
-                              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500"
-                              value={adjustCost}
-                              onChange={(e) => setAdjustCost(e.target.value)}
-                              required
-                          />
-                      </div>
+                      {selectedCurrency.code !== 'COP' && (
+                          <div className="mb-6">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Costo Promedio (COP) <span className="text-gray-400 text-xs">(Opcional, dejar igual si no cambia)</span></label>
+                              <input 
+                                  type="number" 
+                                  step="any"
+                                  className="w-full border border-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500"
+                                  value={adjustCost}
+                                  onChange={(e) => setAdjustCost(e.target.value)}
+                                  required
+                              />
+                          </div>
+                      )}
 
                       <div className="flex justify-end gap-3">
                           <button 
