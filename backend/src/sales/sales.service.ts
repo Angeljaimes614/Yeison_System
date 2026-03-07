@@ -32,33 +32,32 @@ export class SalesService {
 
     try {
       // 1. Revert Inventory (Add back what was sold)
-      // We add back the quantity and the ORIGINAL COST of the sale to maintain WAC integrity.
-      // If we didn't save costBasis, we have to estimate or use current average (risky).
-      // Ideally we should have saved 'costBasis'. If not, we use (totalPesos - profit).
-      
-      const globalInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId: sale.currencyId } });
-      
-      if (!globalInv) {
-         // Should exist if we sold it, but if deleted, recreate?
-         // Reversal requires inventory to exist to put it back.
-         throw new NotFoundException('Inventory record not found for reversal');
+      // Only if it was an INVENTORY operation. DIRECT operations didn't touch inventory.
+      if (sale.operationType !== 'DIRECT') {
+        const globalInv = await queryRunner.manager.findOne(GlobalInventory, { where: { currencyId: sale.currencyId } });
+        
+        if (!globalInv) {
+           // Should exist if we sold it, but if deleted, recreate?
+           // Reversal requires inventory to exist to put it back.
+           throw new NotFoundException('Inventory record not found for reversal');
+        }
+  
+        const qtyToReverse = Number(sale.amount);
+        
+        // Calculate original cost basis
+        // Profit = Revenue - Cost => Cost = Revenue - Profit
+        const originalCostOfSale = Number(sale.totalPesos) - Number(sale.profit);
+  
+        globalInv.totalQuantity = Number(globalInv.totalQuantity) + qtyToReverse;
+        globalInv.totalCostCOP = Number(globalInv.totalCostCOP) + originalCostOfSale;
+        
+        // Recalculate Average
+        if (globalInv.totalQuantity > 0) {
+            globalInv.averageCost = globalInv.totalCostCOP / globalInv.totalQuantity;
+        }
+  
+        await queryRunner.manager.save(globalInv);
       }
-
-      const qtyToReverse = Number(sale.amount);
-      
-      // Calculate original cost basis
-      // Profit = Revenue - Cost => Cost = Revenue - Profit
-      const originalCostOfSale = Number(sale.totalPesos) - Number(sale.profit);
-
-      globalInv.totalQuantity = Number(globalInv.totalQuantity) + qtyToReverse;
-      globalInv.totalCostCOP = Number(globalInv.totalCostCOP) + originalCostOfSale;
-      
-      // Recalculate Average
-      if (globalInv.totalQuantity > 0) {
-          globalInv.averageCost = globalInv.totalCostCOP / globalInv.totalQuantity;
-      }
-
-      await queryRunner.manager.save(globalInv);
 
       // 2. Revert Capital (Deduct Cash & Profit)
       const capitals = await queryRunner.manager.find(Capital);

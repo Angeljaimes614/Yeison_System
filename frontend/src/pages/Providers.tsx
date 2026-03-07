@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { providersService, purchasesService } from '../api/services';
-import { UserPlus, Edit2, Trash2, Check, AlertCircle, Search, FileText, X, AlertTriangle } from 'lucide-react';
+import { providersService, purchasesService, paymentsService } from '../api/services';
+import { UserPlus, Edit2, Trash2, Check, AlertCircle, Search, FileText, X, AlertTriangle, DollarSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Providers = () => {
@@ -18,6 +18,12 @@ const Providers = () => {
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Payment Modal State
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -65,6 +71,47 @@ const Providers = () => {
     } catch (err: any) {
         alert(err.response?.data?.message || 'Error al anular compra');
     }
+  };
+
+  // Payment Logic
+  const handleOpenPayment = (transaction: any) => {
+      setSelectedTransaction(transaction);
+      setPaymentAmount('');
+      setIsPaymentOpen(true);
+  };
+
+  const handleRegisterPayment = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedTransaction) return;
+
+      const amount = parseFloat(paymentAmount);
+      if (isNaN(amount) || amount <= 0) {
+          alert('Por favor ingrese un monto válido');
+          return;
+      }
+      if (amount > Number(selectedTransaction.pendingBalance)) {
+          alert('El monto no puede ser mayor al saldo pendiente');
+          return;
+      }
+
+      setPaymentLoading(true);
+      try {
+          await paymentsService.create({
+              purchaseId: selectedTransaction.id,
+              amount: amount,
+              date: new Date().toISOString(),
+              method: 'cash', // Default to cash for now
+              createdById: user?.id
+          });
+          alert('Abono registrado correctamente');
+          setIsPaymentOpen(false);
+          if (selectedProvider) loadHistory(selectedProvider); // Reload history
+      } catch (err: any) {
+          console.error(err);
+          alert(err.response?.data?.message || 'Error al registrar abono');
+      } finally {
+          setPaymentLoading(false);
+      }
   };
 
   const handleOpenModal = (providerToEdit?: any) => {
@@ -265,7 +312,7 @@ const Providers = () => {
       {/* History Modal */}
       {isHistoryOpen && selectedProvider && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6 h-[80vh] flex flex-col">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl p-6 h-[85vh] flex flex-col">
                 <div className="flex justify-between items-center mb-4">
                     <div>
                         <h2 className="text-xl font-bold text-gray-800">Historial de: {selectedProvider.name}</h2>
@@ -326,14 +373,25 @@ const Providers = () => {
                                                 <span className="text-green-600 font-bold">Pagado</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-4 py-3 text-center space-x-2">
                                             {!tx.isReversed && (
-                                                <button 
-                                                    onClick={() => handleReversePurchase(tx.id)}
-                                                    className="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded hover:bg-red-50"
-                                                >
-                                                    Anular
-                                                </button>
+                                                <>
+                                                    {Number(tx.pendingBalance) > 0 && (
+                                                        <button 
+                                                            onClick={() => handleOpenPayment(tx)}
+                                                            className="text-green-600 hover:text-green-800 text-xs border border-green-200 px-2 py-1 rounded hover:bg-green-50 mb-1 inline-block"
+                                                            title="Abonar a esta deuda"
+                                                        >
+                                                            Abonar
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => handleReversePurchase(tx.id)}
+                                                        className="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded hover:bg-red-50"
+                                                    >
+                                                        Anular
+                                                    </button>
+                                                </>
                                             )}
                                         </td>
                                     </tr>
@@ -359,6 +417,54 @@ const Providers = () => {
             </div>
         </div>
       )}
+
+      {/* Payment Modal */}
+      {isPaymentOpen && selectedTransaction && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Registrar Abono</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                      Abonar a Compra del {new Date(selectedTransaction.date).toLocaleDateString()} <br/>
+                      Saldo Pendiente: <span className="font-bold text-red-600">$ {Number(selectedTransaction.pendingBalance).toLocaleString()}</span>
+                  </p>
+
+                  <form onSubmit={handleRegisterPayment}>
+                      <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Monto a Abonar (COP)</label>
+                          <div className="relative">
+                              <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                              <input 
+                                  type="number" 
+                                  className="pl-10 w-full border border-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="0"
+                                  value={paymentAmount}
+                                  onChange={(e) => setPaymentAmount(e.target.value)}
+                                  autoFocus
+                              />
+                          </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3">
+                          <button 
+                              type="button"
+                              onClick={() => setIsPaymentOpen(false)}
+                              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                          >
+                              Cancelar
+                          </button>
+                          <button 
+                              type="submit"
+                              disabled={paymentLoading}
+                              className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                          >
+                              {paymentLoading ? 'Registrando...' : 'Registrar Abono'}
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
+
     </div>
   );
 };
