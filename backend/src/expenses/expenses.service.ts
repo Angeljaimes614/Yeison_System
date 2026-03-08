@@ -53,8 +53,10 @@ export class ExpensesService {
 
       const savedExpense = await queryRunner.manager.save(Expense, expense);
 
-      // 3. Deduct from Capital
+      // 3. Deduct from Capital & Profit
+      // Expenses reduce both Cash (Operative Plante) and Net Profit (Accumulated Profit)
       const currentPlante = Number(capital.operativePlante);
+      const currentProfit = Number(capital.accumulatedProfit);
       const expenseAmount = Number(amount);
       
       console.log('--- DEBUG EXPENSE CAPITAL UPDATE ---');
@@ -63,6 +65,8 @@ export class ExpensesService {
       console.log('New Plante should be:', currentPlante - expenseAmount);
 
       capital.operativePlante = currentPlante - expenseAmount;
+      capital.accumulatedProfit = currentProfit - expenseAmount;
+      
       await queryRunner.manager.save(Capital, capital);
 
       await queryRunner.commitTransaction();
