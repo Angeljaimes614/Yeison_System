@@ -17,6 +17,11 @@ export class CapitalController {
       return this.capitalService.adjustOperativeCash(body.amount, body.userId);
   }
 
+  @Get('audit')
+  getAudit() {
+      return this.capitalService.getAuditReport();
+  }
+
   @Get('movements')
   getMovements() {
     return this.capitalService.getMovements();

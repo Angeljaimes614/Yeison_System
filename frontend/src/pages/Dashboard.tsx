@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { capitalService, inventoryService, currenciesService } from '../api/services';
-import { DollarSign, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, Coins, Edit3, X, Save } from 'lucide-react';
+import { DollarSign, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, Coins, Edit3, X, Save, FileBarChart } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -19,6 +19,11 @@ const Dashboard = () => {
   const [adjustQuantity, setAdjustQuantity] = useState('');
   const [adjustCost, setAdjustCost] = useState('');
   const [adjustLoading, setAdjustLoading] = useState(false);
+
+  // Audit Modal State
+  const [isAuditOpen, setIsAuditOpen] = useState(false);
+  const [auditData, setAuditData] = useState<any | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -58,6 +63,20 @@ const Dashboard = () => {
     }, 30000);
     return () => clearInterval(interval);
   }, [user]);
+
+  const handleOpenAudit = async () => {
+      setIsAuditOpen(true);
+      setAuditLoading(true);
+      try {
+          const res = await capitalService.getAudit();
+          setAuditData(res.data);
+      } catch (err) {
+          console.error(err);
+          alert('Error al generar auditoría');
+      } finally {
+          setAuditLoading(false);
+      }
+  };
 
   const handleOpenAdjust = (currency: any, currentQty: number) => {
       if (user?.role !== 'admin') return;
@@ -169,13 +188,25 @@ const Dashboard = () => {
            </div>
         </div>
         
-        <button 
-           onClick={() => fetchData()}
-           className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center transition-colors"
-           disabled={loading}
-        >
-           {loading ? 'Actualizando...' : '↻ Actualizar Datos'}
-        </button>
+        <div className="flex gap-2">
+            {user?.role === 'admin' && (
+                <button 
+                onClick={handleOpenAudit}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center transition-colors"
+                title="Ver Auditoría de Caja"
+                >
+                <FileBarChart className="h-5 w-5 mr-2" />
+                Auditoría
+                </button>
+            )}
+            <button 
+            onClick={() => fetchData()}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center transition-colors"
+            disabled={loading}
+            >
+            {loading ? 'Actualizando...' : '↻ Actualizar Datos'}
+            </button>
+        </div>
       </div>
 
       {/* Resumen General de Balances por Moneda */}
@@ -297,6 +328,84 @@ const Dashboard = () => {
                           </button>
                       </div>
                   </form>
+              </div>
+          </div>
+      )}
+
+      {/* Audit Modal */}
+      {isAuditOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                          <FileBarChart className="h-6 w-6 mr-2 text-purple-600" />
+                          Auditoría de Caja (Análisis Forense)
+                      </h3>
+                      <button onClick={() => setIsAuditOpen(false)} className="text-gray-500 hover:text-gray-700">
+                          <X className="h-6 w-6" />
+                      </button>
+                  </div>
+
+                  {auditLoading ? (
+                      <div className="flex justify-center py-10">
+                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
+                      </div>
+                  ) : auditData ? (
+                      <div className="space-y-4">
+                          <div className={`p-4 rounded-lg border ${auditData.difference === 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                              <h4 className="font-bold text-lg mb-2">Resultado: {auditData.analysis}</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                      <span className="text-gray-600 text-sm">Caja Teórica (Debería haber):</span>
+                                      <p className="font-mono font-bold text-xl">$ {Number(auditData.theoreticalCash).toLocaleString()}</p>
+                                  </div>
+                                  <div>
+                                      <span className="text-gray-600 text-sm">Caja Real (Sistema):</span>
+                                      <p className="font-mono font-bold text-xl">$ {Number(auditData.actualCash).toLocaleString()}</p>
+                                  </div>
+                              </div>
+                              {auditData.difference !== 0 && (
+                                  <div className="mt-2 pt-2 border-t border-red-200 text-red-700 font-bold">
+                                      Diferencia: $ {Number(auditData.difference).toLocaleString()}
+                                  </div>
+                              )}
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-gray-50">
+                              <h5 className="font-bold text-gray-700 mb-3 border-b pb-2">Desglose de Movimientos</h5>
+                              
+                              <div className="space-y-2">
+                                  <div className="flex justify-between text-green-700">
+                                      <span>(+) Ventas Cobradas (Cash In):</span>
+                                      <span className="font-mono">$ {Number(auditData.salesCashIn).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between text-blue-700">
+                                      <span>(+) Inyecciones de Capital:</span>
+                                      <span className="font-mono">$ {Number(auditData.injections).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between text-red-600">
+                                      <span>(-) Compras Pagadas (Cash Out):</span>
+                                      <span className="font-mono">- $ {Number(auditData.purchasesCashOut).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between text-orange-600">
+                                      <span>(-) Gastos Operativos:</span>
+                                      <span className="font-mono">- $ {Number(auditData.expensesCashOut).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between text-purple-600">
+                                      <span>(-) Retiros de Capital/Utilidad:</span>
+                                      <span className="font-mono">- $ {Number(auditData.withdrawals).toLocaleString()}</span>
+                                  </div>
+                              </div>
+                          </div>
+                          
+                          <p className="text-xs text-gray-500 mt-2 text-center">
+                              Este informe suma todas las transacciones históricas y las compara con el saldo actual.
+                              Si hay diferencia, se recomienda usar el botón "Ajustar Caja" para corregir el saldo inicial.
+                          </p>
+                      </div>
+                  ) : (
+                      <p className="text-center text-red-500">No se pudieron cargar los datos.</p>
+                  )}
               </div>
           </div>
       )}

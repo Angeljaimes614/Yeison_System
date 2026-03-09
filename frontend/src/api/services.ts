@@ -22,6 +22,7 @@ export const capitalService = {
     api.post('/capital/movements', data),
   adjustCash: (data: { amount: number, userId: string }) => api.post('/capital/adjust', data),
   getMovements: () => api.get('/capital/movements'),
+  getAudit: () => api.get('/capital/audit'),
 };
 
 export const inventoryService = {
