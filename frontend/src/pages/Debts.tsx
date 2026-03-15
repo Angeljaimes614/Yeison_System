@@ -5,7 +5,7 @@ import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock, PlusCircle,
 
 const Debts = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'receivable' | 'payable' | 'loans'>('receivable');
+  const [activeTab, setActiveTab] = useState<'receivable' | 'payable'>('receivable');
   const [receivables, setReceivables] = useState<any[]>([]);
   const [payables, setPayables] = useState<any[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
@@ -16,6 +16,7 @@ const Debts = () => {
   const [clientName, setClientName] = useState('');
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
+  const [isLoan, setIsLoan] = useState(false);
 
   // Increase Debt Modal
   const [showIncreaseModal, setShowIncreaseModal] = useState(false);
@@ -65,10 +66,9 @@ const Debts = () => {
             description: d.description
         }));
 
-      const oldReceivables = activeOldDebts.filter((d: any) => d.oldDebtType === 'CLIENT' || !d.oldDebtType);
+      const oldReceivables = activeOldDebts.filter((d: any) => d.oldDebtType === 'CLIENT' || d.oldDebtType === 'LOAN' || !d.oldDebtType);
       const oldPayables = activeOldDebts.filter((d: any) => d.oldDebtType === 'PROVIDER');
-      const activeLoans = activeOldDebts.filter((d: any) => d.oldDebtType === 'LOAN');
-
+      
       // Merge Receivables
       const allReceivables = [...pendingSales, ...oldReceivables]
         .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -85,8 +85,8 @@ const Debts = () => {
 
       setPayables(allPayables);
 
-      // 4. Process Loans
-      setLoans(activeLoans.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      // 4. Process Loans (None, merged into receivables)
+      setLoans([]);
 
     } catch (error) {
       console.error(error);
@@ -101,8 +101,6 @@ const Debts = () => {
           let type = 'CLIENT';
           if (activeTab === 'payable') type = 'PROVIDER';
           
-          // Check if it's a loan (checkbox)
-          const isLoan = (document.getElementById('isLoan') as HTMLInputElement)?.checked;
           if (activeTab === 'receivable' && isLoan) {
               type = 'LOAN';
           }
@@ -123,6 +121,7 @@ const Debts = () => {
           setClientName('');
           setDescription('');
           setTotalAmount('');
+          setIsLoan(false);
           loadData();
       } catch (error: any) {
           alert('Error: ' + (error.response?.data?.message || 'Error desconocido'));
@@ -398,23 +397,6 @@ const Debts = () => {
             </span>
           </div>
         </button>
-
-        <button
-          onClick={() => setActiveTab('loans')}
-          className={`flex-1 py-4 px-6 rounded-lg shadow-sm flex items-center justify-center transition-all ${
-            activeTab === 'loans' 
-              ? 'bg-blue-50 border-2 border-blue-500 text-blue-700' 
-              : 'bg-white hover:bg-gray-50 text-gray-600'
-          }`}
-        >
-          <Banknote className={`mr-3 h-8 w-8 ${activeTab === 'loans' ? 'text-blue-600' : 'text-gray-400'}`} />
-          <div className="text-left">
-            <span className="block text-xs font-bold uppercase tracking-wide">Préstamos a Terceros</span>
-            <span className="text-2xl font-bold">
-              $ {loans.reduce((sum, tx) => sum + Number(tx.pendingBalance), 0).toLocaleString('es-CO')}
-            </span>
-          </div>
-        </button>
       </div>
 
       {/* Content */}
@@ -422,8 +404,7 @@ const Debts = () => {
          <div className="text-center py-12">Cargando información financiera...</div>
       ) : (
          activeTab === 'receivable' ? renderTable(receivables, 'receivable') : 
-         activeTab === 'payable' ? renderTable(payables, 'payable') :
-         renderTable(loans, 'loans')
+         renderTable(payables, 'payable')
       )}
 
       {/* Modal Deuda Antigua / Préstamo */}
@@ -459,7 +440,12 @@ const Debts = () => {
               {activeTab === 'receivable' && (
                   <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-100">
                       <label className="flex items-center space-x-2 cursor-pointer">
-                          <input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600" id="isLoan" />
+                          <input 
+                              type="checkbox" 
+                              className="form-checkbox h-4 w-4 text-blue-600" 
+                              checked={isLoan} 
+                              onChange={(e) => setIsLoan(e.target.checked)}
+                          />
                           <span className="text-sm text-blue-800 font-medium">¿Es un Préstamo Nuevo? (Sale dinero de Caja YA)</span>
                       </label>
                   </div>
@@ -480,7 +466,7 @@ const Debts = () => {
           <div className="bg-white rounded-lg max-w-sm w-full p-6">
             <h2 className="text-xl font-bold mb-4">Aumentar Deuda / Préstamo</h2>
             <p className="text-sm text-gray-500 mb-4">
-                {activeTab === 'receivable' || activeTab === 'loans'
+                {activeTab === 'receivable'
                    ? 'Esto registrará un NUEVO PRÉSTAMO adicional. El dinero SALDRÁ de la Caja.'
                    : 'Esto registrará una NUEVA DEUDA con el proveedor.'
                 }
