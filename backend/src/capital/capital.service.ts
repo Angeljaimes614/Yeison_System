@@ -29,55 +29,89 @@ export class CapitalService {
   ) {}
 
   async getAuditReport() {
-    // 1. Calculate Sales Cash In (Completed or Partial Payments)
-    // We sum 'paidAmount' from all sales that are NOT reversed
-    const sales = await this.saleRepository.find({ where: { } }); // Filter status!=reversed manually or query builder
-    const salesCashIn = sales
-        .filter(s => s.status !== 'reversed')
-        .reduce((sum, s) => sum + Number(s.paidAmount), 0);
+    // Helper to extract YYYY-MM
+    const getMonth = (date: Date) => date.toISOString().slice(0, 7);
 
-    // 2. Calculate Purchases Cash Out
+    // Initialize Monthly Map
+    const monthlyBreakdown: Record<string, any> = {};
+    const initMonth = (month: string) => {
+        if (!monthlyBreakdown[month]) {
+            monthlyBreakdown[month] = { 
+                month, 
+                in: 0, 
+                out: 0, 
+                net: 0,
+                details: { sales: 0, injections: 0, purchases: 0, expenses: 0, withdrawals: 0 }
+            };
+        }
+    };
+
+    // 1. Sales Cash In
+    const sales = await this.saleRepository.find({ where: { } });
+    const validSales = sales.filter(s => s.status !== 'reversed');
+    const salesCashIn = validSales.reduce((sum, s) => {
+        const amount = Number(s.paidAmount);
+        const month = getMonth(s.date);
+        initMonth(month);
+        monthlyBreakdown[month].in += amount;
+        monthlyBreakdown[month].details.sales += amount;
+        return sum + amount;
+    }, 0);
+
+    // 2. Purchases Cash Out
     const purchases = await this.purchaseRepository.find({ where: { } });
-    const purchasesCashOut = purchases
-        .filter(p => p.status !== 'reversed')
-        .reduce((sum, p) => sum + Number(p.paidAmount), 0);
+    const validPurchases = purchases.filter(p => p.status !== 'reversed');
+    const purchasesCashOut = validPurchases.reduce((sum, p) => {
+        const amount = Number(p.paidAmount);
+        const month = getMonth(p.date);
+        initMonth(month);
+        monthlyBreakdown[month].out += amount;
+        monthlyBreakdown[month].details.purchases += amount;
+        return sum + amount;
+    }, 0);
 
-    // 3. Calculate Expenses Cash Out
+    // 3. Expenses Cash Out
     const expenses = await this.expenseRepository.find();
-    const expensesCashOut = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const expensesCashOut = expenses.reduce((sum, e) => {
+        const amount = Number(e.amount);
+        const month = getMonth(e.date);
+        initMonth(month);
+        monthlyBreakdown[month].out += amount;
+        monthlyBreakdown[month].details.expenses += amount;
+        return sum + amount;
+    }, 0);
 
-    // 4. Calculate Payments (Old Debts / Extra Payments) 
-    // Wait, 'paidAmount' in Sale/Purchase ALREADY includes payments made via PaymentsService?
-    // Yes, PaymentsService updates Sale.paidAmount.
-    // So if we sum Sale.paidAmount, we are covering everything linked to sales.
-    // BUT what about payments linked to OLD_DEBTS? Those are not in Sale table.
-    // We need to check Payments linked to OldDebt.
-    const payments = await this.paymentRepository.find({ where: { isReversed: false } });
-    const oldDebtPaymentsIn = payments
-        .filter(p => p.oldDebtId && !p.purchaseId && !p.saleId) // Assuming Type logic for OldDebt? 
-        // Actually Payment entity has 'oldDebtId'.
-        // If OldDebt type is PROVIDER -> Cash Out. If CLIENT -> Cash In.
-        // Complex... For now let's assume OldDebt payments are minimal or handle them.
-        // Let's check if we can distinguish type.
-        // The Payment entity doesn't duplicate the type easily.
-        // Let's skip OldDebt specific logic for this rough audit unless critical.
-        // OR:
-        // We can just sum all INJECTIONS and WITHDRAWALS from CapitalMovements.
-        .reduce((sum, p) => sum, 0); 
-
-    // 5. Capital Movements (Manual Injections / Withdrawals)
+    // 4. Capital Movements
     const movements = await this.movementRepository.find();
+    
     const injections = movements
         .filter(m => m.type === 'INJECTION')
-        .reduce((sum, m) => sum + Number(m.amount), 0);
+        .reduce((sum, m) => {
+            const amount = Number(m.amount);
+            const month = getMonth(m.date);
+            initMonth(month);
+            monthlyBreakdown[month].in += amount;
+            monthlyBreakdown[month].details.injections += amount;
+            return sum + amount;
+        }, 0);
     
     const withdrawals = movements
         .filter(m => m.type === 'WITHDRAWAL_PROFIT' || m.type === 'WITHDRAWAL_CAPITAL')
-        .reduce((sum, m) => sum + Number(m.amount), 0);
+        .reduce((sum, m) => {
+            const amount = Number(m.amount);
+            const month = getMonth(m.date);
+            initMonth(month);
+            monthlyBreakdown[month].out += amount;
+            monthlyBreakdown[month].details.withdrawals += amount;
+            return sum + amount;
+        }, 0);
+
+    // 5. Calculate Net per Month
+    Object.values(monthlyBreakdown).forEach((m: any) => {
+        m.net = m.in - m.out;
+    });
 
     // 6. Current Theoretical Balance
-    // Cash = (Injections + SalesCashIn) - (PurchasesCashOut + ExpensesCashOut + Withdrawals)
-    // Note: SalesCashIn includes initial payment + subsequent payments.
     const theoreticalCash = (injections + salesCashIn) - (purchasesCashOut + expensesCashOut + withdrawals);
 
     // 7. Actual Balance
@@ -93,7 +127,8 @@ export class CapitalService {
         theoreticalCash,
         actualCash,
         difference: actualCash - theoreticalCash,
-        analysis: actualCash === theoreticalCash ? 'OK' : 'DISCREPANCY DETECTED'
+        analysis: actualCash === theoreticalCash ? 'OK' : 'DISCREPANCY DETECTED',
+        monthlyBreakdown: Object.values(monthlyBreakdown).sort((a: any, b: any) => b.month.localeCompare(a.month))
     };
   }
 

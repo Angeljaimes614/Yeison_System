@@ -335,7 +335,7 @@ const Dashboard = () => {
       {/* Audit Modal */}
       {isAuditOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6 overflow-y-auto max-h-[90vh]">
                   <div className="flex justify-between items-center mb-4">
                       <h3 className="text-xl font-bold text-gray-800 flex items-center">
                           <FileBarChart className="h-6 w-6 mr-2 text-purple-600" />
@@ -351,7 +351,7 @@ const Dashboard = () => {
                           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
                       </div>
                   ) : auditData ? (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                           <div className={`p-4 rounded-lg border ${auditData.difference === 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                               <h4 className="font-bold text-lg mb-2">Resultado: {auditData.analysis}</h4>
                               <div className="grid grid-cols-2 gap-4">
@@ -372,8 +372,7 @@ const Dashboard = () => {
                           </div>
 
                           <div className="border rounded-lg p-4 bg-gray-50">
-                              <h5 className="font-bold text-gray-700 mb-3 border-b pb-2">Desglose de Movimientos</h5>
-                              
+                              <h5 className="font-bold text-gray-700 mb-3 border-b pb-2">Desglose de Movimientos Global</h5>
                               <div className="space-y-2">
                                   <div className="flex justify-between text-green-700">
                                       <span>(+) Ventas Cobradas (Cash In):</span>
@@ -397,6 +396,38 @@ const Dashboard = () => {
                                   </div>
                               </div>
                           </div>
+
+                          {/* Monthly Breakdown Table */}
+                          {auditData.monthlyBreakdown && auditData.monthlyBreakdown.length > 0 && (
+                              <div className="border rounded-lg overflow-hidden">
+                                  <table className="min-w-full divide-y divide-gray-200">
+                                      <thead className="bg-gray-50">
+                                          <tr>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mes</th>
+                                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Entradas</th>
+                                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Salidas</th>
+                                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Neto</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody className="bg-white divide-y divide-gray-200">
+                                          {auditData.monthlyBreakdown.map((m: any) => (
+                                              <tr key={m.month}>
+                                                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{m.month}</td>
+                                                  <td className="px-4 py-3 text-sm text-right text-green-600 font-mono">
+                                                      + {Number(m.in).toLocaleString()}
+                                                  </td>
+                                                  <td className="px-4 py-3 text-sm text-right text-red-600 font-mono">
+                                                      - {Number(m.out).toLocaleString()}
+                                                  </td>
+                                                  <td className={`px-4 py-3 text-sm text-right font-bold font-mono ${m.net >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                                                      {Number(m.net).toLocaleString()}
+                                                  </td>
+                                              </tr>
+                                          ))}
+                                      </tbody>
+                                  </table>
+                              </div>
+                          )}
                           
                           <p className="text-xs text-gray-500 mt-2 text-center">
                               Este informe suma todas las transacciones históricas y las compara con el saldo actual.
