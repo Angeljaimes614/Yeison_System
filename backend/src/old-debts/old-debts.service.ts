@@ -88,7 +88,8 @@ export class OldDebtsService {
         if (!debt) throw new NotFoundException('Deuda no encontrada');
 
         if (Number(debt.pendingBalance) < Number(amount)) {
-            throw new BadRequestException(`El abono excede el saldo pendiente ($${debt.pendingBalance})`);
+            // Allow overpayment! Do not throw error.
+            // throw new BadRequestException(`El abono excede el saldo pendiente ($${debt.pendingBalance})`);
         }
 
         // Update Debt
@@ -123,7 +124,25 @@ export class OldDebtsService {
         
         await queryRunner.manager.save(capital);
 
-        // Create Payment Record
+        // Check if OVERPAYMENT (Saldo a favor)
+        // If pendingBalance becomes negative, it means we paid more than owed (or client paid more).
+        // The logic above already updated pendingBalance = OldPending - Amount.
+        // If pendingBalance < 0, it means an overpayment.
+        // This is fine, negative pendingBalance means "Saldo a Favor".
+        
+        // If Provider Debt becomes negative -> Provider owes ME money (Asset).
+        // If Client Debt becomes negative -> I owe Client money (Liability).
+        
+        if (debt.pendingBalance <= 0) {
+            // Don't deactivate if negative (overpayment), only if exactly zero?
+            // Actually, keep it active so we can track the credit balance.
+            // Only deactivate if exactly zero.
+            if (Number(debt.pendingBalance) === 0) {
+                debt.isActive = false;
+            } else {
+                debt.isActive = true; // Keep active if negative (credit)
+            }
+        }
         const payment = queryRunner.manager.create(Payment, {
             date: new Date(),
             amount: amount,

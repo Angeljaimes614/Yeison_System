@@ -46,7 +46,8 @@ const Debts = () => {
 
       // 2. Process Old Debts
       const activeOldDebts = oldDebtsRes.data
-        .filter((d: any) => d.isActive && Number(d.pendingBalance) > 0)
+        // .filter((d: any) => d.isActive && Number(d.pendingBalance) > 0) // Show all active, even negative (credit)
+        .filter((d: any) => d.isActive)
         .map((d: any) => ({
             id: d.id,
             date: d.createdAt,
@@ -139,8 +140,9 @@ const Debts = () => {
       }
 
       if (amount > Number(tx.pendingBalance)) {
-          alert('El abono no puede ser mayor al saldo pendiente.');
-          return;
+          // Allow overpayment logic
+          // alert('El abono no puede ser mayor al saldo pendiente.');
+          // return;
       }
 
       try {
@@ -280,9 +282,11 @@ const Debts = () => {
                   $ {Number(tx.paidAmount || paid).toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-red-600 font-bold text-sm">$ {pending.toLocaleString('es-CO')}</span>
+                  <span className={`font-bold text-sm ${pending < 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                      {pending < 0 ? `+ $ ${Math.abs(pending).toLocaleString('es-CO')} (A Favor)` : `$ ${pending.toLocaleString('es-CO')}`}
+                  </span>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                    <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                    <div className={`h-1.5 rounded-full ${pending < 0 ? 'bg-blue-500' : 'bg-green-500'}`} style={{ width: `${Math.min(progress, 100)}%` }}></div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right flex justify-end gap-2">
@@ -355,8 +359,8 @@ const Debts = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center shadow"
         >
             <PlusCircle className="mr-2 h-5 w-5" />
-            {activeTab === 'receivable' ? 'Registrar Deuda / Préstamo' : 
-             'Registrar Deuda Proveedor'}
+            {activeTab === 'payable' ? 'Registrar Deuda Proveedor' : 
+             'Registrar Deuda / Préstamo'}
         </button>
       </div>
 
