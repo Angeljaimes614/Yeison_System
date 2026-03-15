@@ -278,7 +278,7 @@ const Debts = () => {
                   $ {total.toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
-                  $ {Number(tx.paidAmount || paid).toLocaleString('es-CO')}
+                  $ {Number(tx.paidAmount).toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`font-bold text-sm ${pending < 0 ? 'text-blue-600' : 'text-red-600'}`}>
