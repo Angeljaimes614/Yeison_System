@@ -47,8 +47,8 @@ const Debts = () => {
 
       // 2. Process Old Debts
       const activeOldDebts = oldDebtsRes.data
-        // .filter((d: any) => d.isActive && Number(d.pendingBalance) > 0) // Show all active, even negative (credit)
-        .filter((d: any) => d.isActive)
+        // Show ALL debts, even if not active (so we can see overpayments that reached 0 or negative)
+        //.filter((d: any) => d.isActive) 
         .map((d: any) => ({
             id: d.id,
             date: d.createdAt,

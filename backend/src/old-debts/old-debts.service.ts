@@ -290,9 +290,10 @@ export class OldDebtsService {
     }
   }
 
-  findAll() {
+    async findAll() {
     return this.oldDebtRepository.find({
-        order: { createdAt: 'DESC' }
+        order: { createdAt: 'DESC' },
+        // where: { isActive: true } // Removed to show ALL debts including negative/zero if needed
     });
   }
 }
