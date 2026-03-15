@@ -9,7 +9,7 @@ export class OldDebt {
   @Column()
   clientName: string;
 
-  @Column({ default: 'CLIENT' }) // 'CLIENT' (Receivable) | 'PROVIDER' (Payable)
+  @Column({ default: 'CLIENT' }) // 'CLIENT' (Receivable) | 'PROVIDER' (Payable) | 'LOAN' (Préstamo a Tercero)
   type: string;
 
   @Column({ nullable: true })

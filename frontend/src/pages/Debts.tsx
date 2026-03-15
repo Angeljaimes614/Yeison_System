@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { salesService, purchasesService, paymentsService, oldDebtsService } from '../api/services';
-import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock, PlusCircle, History, RotateCcw, Trash2 } from 'lucide-react';
+import { Wallet, ArrowDownCircle, ArrowUpCircle, CheckCircle, Clock, PlusCircle, History, RotateCcw, Trash2, Banknote } from 'lucide-react';
 
 const Debts = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'receivable' | 'payable'>('receivable');
+  const [activeTab, setActiveTab] = useState<'receivable' | 'payable' | 'loans'>('receivable');
   const [receivables, setReceivables] = useState<any[]>([]);
   const [payables, setPayables] = useState<any[]>([]);
+  const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Old Debt Modal
@@ -49,7 +50,7 @@ const Debts = () => {
         .map((d: any) => ({
             id: d.id,
             date: d.createdAt,
-            client: d.type === 'CLIENT' || !d.type ? { name: d.clientName } : undefined,
+            client: d.type === 'CLIENT' || d.type === 'LOAN' || !d.type ? { name: d.clientName } : undefined,
             provider: d.type === 'PROVIDER' ? { name: d.clientName } : undefined,
             clientName: d.clientName,
             amount: 0, 
@@ -63,8 +64,9 @@ const Debts = () => {
             description: d.description
         }));
 
-      const oldReceivables = activeOldDebts.filter((d: any) => d.oldDebtType !== 'PROVIDER');
+      const oldReceivables = activeOldDebts.filter((d: any) => d.oldDebtType === 'CLIENT' || !d.oldDebtType);
       const oldPayables = activeOldDebts.filter((d: any) => d.oldDebtType === 'PROVIDER');
+      const activeLoans = activeOldDebts.filter((d: any) => d.oldDebtType === 'LOAN');
 
       // Merge Receivables
       const allReceivables = [...pendingSales, ...oldReceivables]
@@ -82,6 +84,9 @@ const Debts = () => {
 
       setPayables(allPayables);
 
+      // 4. Process Loans
+      setLoans(activeLoans.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+
     } catch (error) {
       console.error(error);
     } finally {
@@ -92,7 +97,15 @@ const Debts = () => {
   const handleCreateOldDebt = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
-          const type = activeTab === 'receivable' ? 'CLIENT' : 'PROVIDER';
+          let type = 'CLIENT';
+          if (activeTab === 'payable') type = 'PROVIDER';
+          
+          // Check if it's a loan (checkbox)
+          const isLoan = (document.getElementById('isLoan') as HTMLInputElement)?.checked;
+          if (activeTab === 'receivable' && isLoan) {
+              type = 'LOAN';
+          }
+
           await oldDebtsService.create({
               clientName,
               description,
@@ -100,14 +113,18 @@ const Debts = () => {
               userId: user?.id,
               type
           });
-          alert(`Deuda antigua ${type === 'CLIENT' ? 'de cliente' : 'a proveedor'} registrada correctamente`);
+          
+          let successMsg = 'Deuda registrada';
+          if (type === 'LOAN') successMsg = 'Préstamo registrado (Dinero descontado de Caja)';
+          
+          alert(successMsg);
           setShowOldDebtModal(false);
           setClientName('');
           setDescription('');
           setTotalAmount('');
           loadData();
       } catch (error: any) {
-          alert('Error al registrar');
+          alert('Error: ' + (error.response?.data?.message || 'Error desconocido'));
       }
   };
 
@@ -216,7 +233,7 @@ const Debts = () => {
       }
   };
 
-  const renderTable = (transactions: any[], isPayable: boolean) => (
+  const renderTable = (transactions: any[], type: 'receivable' | 'payable' | 'loans') => (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
@@ -224,7 +241,7 @@ const Debts = () => {
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-               {isPayable ? 'Proveedor' : 'Cliente'}
+               {type === 'payable' ? 'Proveedor' : type === 'loans' ? 'Prestatario' : 'Cliente'}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Original</th>
@@ -246,7 +263,7 @@ const Debts = () => {
                   {new Date(tx.date).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {isPayable ? (tx.provider?.name || 'Proveedor General') : (tx.client?.name || tx.clientName || 'Cliente General')}
+                  {type === 'payable' ? (tx.provider?.name || 'Proveedor General') : (tx.client?.name || tx.clientName || 'Cliente General')}
                   {tx.type === 'OLD_DEBT' && <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">Antigua</span>}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -329,16 +346,17 @@ const Debts = () => {
             <Clock className="mr-2 text-blue-600" />
             Cartera y Deudas (Divisas)
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Gestiona las cuentas por cobrar y por pagar de operaciones de divisas.</p>
+            <p className="text-gray-500 text-sm mt-1">Gestiona las cuentas por cobrar, por pagar y préstamos a terceros.</p>
         </div>
         
-        {/* Button for both tabs */}
+        {/* Button for all tabs */}
         <button 
             onClick={() => setShowOldDebtModal(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center shadow"
         >
             <PlusCircle className="mr-2 h-5 w-5" />
-            {activeTab === 'receivable' ? 'Registrar Deuda Antigua (Cliente)' : 'Registrar Deuda Proveedor'}
+            {activeTab === 'receivable' ? 'Registrar Deuda / Préstamo' : 
+             'Registrar Deuda Proveedor'}
         </button>
       </div>
 
@@ -376,47 +394,76 @@ const Debts = () => {
             </span>
           </div>
         </button>
+
+        <button
+          onClick={() => setActiveTab('loans')}
+          className={`flex-1 py-4 px-6 rounded-lg shadow-sm flex items-center justify-center transition-all ${
+            activeTab === 'loans' 
+              ? 'bg-blue-50 border-2 border-blue-500 text-blue-700' 
+              : 'bg-white hover:bg-gray-50 text-gray-600'
+          }`}
+        >
+          <Banknote className={`mr-3 h-8 w-8 ${activeTab === 'loans' ? 'text-blue-600' : 'text-gray-400'}`} />
+          <div className="text-left">
+            <span className="block text-xs font-bold uppercase tracking-wide">Préstamos a Terceros</span>
+            <span className="text-2xl font-bold">
+              $ {loans.reduce((sum, tx) => sum + Number(tx.pendingBalance), 0).toLocaleString('es-CO')}
+            </span>
+          </div>
+        </button>
       </div>
 
       {/* Content */}
       {loading ? (
          <div className="text-center py-12">Cargando información financiera...</div>
       ) : (
-         activeTab === 'receivable' ? renderTable(receivables, false) : renderTable(payables, true)
+         activeTab === 'receivable' ? renderTable(receivables, 'receivable') : 
+         activeTab === 'payable' ? renderTable(payables, 'payable') :
+         renderTable(loans, 'loans')
       )}
 
-      {/* Modal Deuda Antigua */}
+      {/* Modal Deuda Antigua / Préstamo */}
       {showOldDebtModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold mb-4">
-                {activeTab === 'receivable' ? 'Registrar Deuda Antigua (Cliente)' : 'Registrar Deuda Proveedor'}
+                {activeTab === 'receivable' ? 'Registrar Deuda o Préstamo' : 
+                 'Registrar Deuda Proveedor'}
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-                {activeTab === 'receivable' 
-                    ? 'Use esto para clientes que ya le debían dinero. El abono ENTRARÁ a la Caja.'
-                    : 'Use esto para registrar deudas antiguas con proveedores. El abono SALDRÁ de la Caja.'
+                {activeTab === 'receivable' ? 'Puede registrar una deuda antigua de un cliente o un PRÉSTAMO nuevo a un tercero (que descuenta de caja).' :
+                 'Use esto para registrar deudas antiguas con proveedores. El abono SALDRÁ de la Caja.'
                 }
             </p>
             <form onSubmit={handleCreateOldDebt}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700">
-                    {activeTab === 'receivable' ? 'Nombre del Cliente' : 'Nombre del Proveedor'}
+                    {activeTab === 'receivable' ? 'Nombre del Cliente / Prestatario' : 
+                     'Nombre del Proveedor'}
                 </label>
                 <input type="text" required className="w-full border rounded p-2 mt-1" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Ej: Juan Pérez" />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700">Descripción / Concepto</label>
-                <input type="text" required className="w-full border rounded p-2 mt-1" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ej: Saldo pendiente 2024" />
+                <input type="text" required className="w-full border rounded p-2 mt-1" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ej: Préstamo personal" />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Monto Total de la Deuda</label>
+                <label className="block text-sm font-medium text-gray-700">Monto Total</label>
                 <input type="number" required className="w-full border rounded p-2 mt-1" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="0" />
               </div>
 
+              {activeTab === 'receivable' && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-100">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                          <input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600" id="isLoan" />
+                          <span className="text-sm text-blue-800 font-medium">¿Es un Préstamo Nuevo? (Sale dinero de Caja YA)</span>
+                      </label>
+                  </div>
+              )}
+
               <div className="flex justify-end gap-2 mt-6">
                 <button type="button" onClick={() => setShowOldDebtModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Registrar Deuda</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Registrar</button>
               </div>
             </form>
           </div>
@@ -427,11 +474,11 @@ const Debts = () => {
       {showIncreaseModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-sm w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Aumentar Deuda</h2>
+            <h2 className="text-xl font-bold mb-4">Aumentar Deuda / Préstamo</h2>
             <p className="text-sm text-gray-500 mb-4">
-                {activeTab === 'receivable' 
-                   ? 'Esto registrará un NUEVO PRÉSTAMO. El dinero SALDRÁ de la Caja.'
-                   : 'Esto registrará una NUEVA DEUDA con el proveedor. El dinero ENTRARÁ a la Caja (si fue préstamo) o no afectará si es mercancía (ojo con esto, el sistema asume entrada de dinero por ahora).'
+                {activeTab === 'receivable' || activeTab === 'loans'
+                   ? 'Esto registrará un NUEVO PRÉSTAMO adicional. El dinero SALDRÁ de la Caja.'
+                   : 'Esto registrará una NUEVA DEUDA con el proveedor.'
                 }
             </p>
             <form onSubmit={handleIncreaseDebt}>
@@ -466,7 +513,7 @@ const Debts = () => {
             </div>
             
             <div className="mb-4 text-sm text-gray-600">
-                <p><strong>{activeTab === 'receivable' ? 'Cliente' : 'Proveedor'}:</strong> {selectedDebt.clientName || selectedDebt.client?.name || selectedDebt.provider?.name}</p>
+                <p><strong>{activeTab === 'payable' ? 'Proveedor' : 'Cliente/Prestatario'}:</strong> {selectedDebt.clientName || selectedDebt.client?.name || selectedDebt.provider?.name}</p>
                 <p><strong>Saldo Pendiente:</strong> $ {Number(selectedDebt.pendingBalance).toLocaleString()}</p>
             </div>
 

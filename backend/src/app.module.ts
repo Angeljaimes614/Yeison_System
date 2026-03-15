@@ -33,18 +33,34 @@ import { OldDebtsModule } from './old-debts/old-debts.module';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // Auto-create tables (dev only)
-        dropSchema: false, // DISABLED: Data persistence enabled.
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const dbUrl = configService.get<string>('DATABASE_URL');
+        const isProduction = process.env.NODE_ENV === 'production';
+        
+        // If DATABASE_URL is provided (e.g. Neon, Render), use it directly
+        if (dbUrl) {
+            return {
+                type: 'postgres',
+                url: dbUrl,
+                entities: [__dirname + '/**/*.entity{.ts,.js}'],
+                synchronize: true, // Auto-create tables (careful in prod)
+                ssl: isProduction ? { rejectUnauthorized: false } : false,
+            };
+        }
+
+        // Fallback to individual params
+        return {
+            type: 'postgres',
+            host: configService.get<string>('DB_HOST'),
+            port: configService.get<number>('DB_PORT'),
+            username: configService.get<string>('DB_USERNAME'),
+            password: configService.get<string>('DB_PASSWORD'),
+            database: configService.get<string>('DB_NAME'),
+            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            synchronize: true,
+            ssl: isProduction ? { rejectUnauthorized: false } : false,
+        };
+      },
       inject: [ConfigService],
     }),
     UsersModule,
@@ -56,7 +72,7 @@ import { OldDebtsModule } from './old-debts/old-debts.module';
     ProvidersModule,
     PurchasesModule,
     SalesModule,
-    // ExpensesModule, // DISABLED
+    ExpensesModule,
     PaymentsModule,
     CashAuditModule,
     AuthModule,
