@@ -284,9 +284,6 @@ const Debts = () => {
                   <span className={`font-bold text-sm ${pending < 0 ? 'text-blue-600' : 'text-red-600'}`}>
                       {pending < 0 ? `+ $ ${Math.abs(pending).toLocaleString('es-CO')} (A Favor)` : `$ ${pending.toLocaleString('es-CO')}`}
                   </span>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                    <div className={`h-1.5 rounded-full ${pending < 0 ? 'bg-blue-500' : 'bg-green-500'}`} style={{ width: `${Math.min(progress, 100)}%` }}></div>
-                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right flex justify-end gap-2">
                   <button
