@@ -42,7 +42,8 @@ const Debts = () => {
 
       // 1. Process Sales (Receivables)
       const pendingSales = salesRes.data
-        .filter((s: any) => Number(s.pendingBalance) > 0)
+        // Show ALL sales, even if paid or overpaid
+        // .filter((s: any) => Number(s.pendingBalance) > 0)
         .map((s: any) => ({ ...s, type: 'SALE' }));
 
       // 2. Process Old Debts
@@ -418,7 +419,10 @@ const Debts = () => {
           <div className="text-left">
             <span className="block text-xs font-bold uppercase tracking-wide">Por Cobrar (Clientes)</span>
             <span className="text-2xl font-bold">
-              $ {receivables.reduce((sum, tx) => sum + Number(tx.pendingBalance), 0).toLocaleString('es-CO')}
+              $ {receivables
+                  .filter(tx => Number(tx.pendingBalance) > 0)
+                  .reduce((sum, tx) => sum + Number(tx.pendingBalance), 0)
+                  .toLocaleString('es-CO')}
             </span>
           </div>
         </button>
@@ -435,7 +439,10 @@ const Debts = () => {
           <div className="text-left">
             <span className="block text-xs font-bold uppercase tracking-wide">Por Pagar (Proveedores)</span>
             <span className="text-2xl font-bold">
-              $ {payables.reduce((sum, tx) => sum + Number(tx.pendingBalance), 0).toLocaleString('es-CO')}
+              $ {payables
+                  .filter(tx => Number(tx.pendingBalance) > 0)
+                  .reduce((sum, tx) => sum + Number(tx.pendingBalance), 0)
+                  .toLocaleString('es-CO')}
             </span>
           </div>
         </button>

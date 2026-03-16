@@ -53,14 +53,28 @@ export class PaymentsService {
 
         // Check if amount exceeds pending balance
         if (amount > Number(purchase.pendingBalance)) {
-           throw new BadRequestException(`Payment amount ${amount} exceeds pending balance ${purchase.pendingBalance}`);
+           // Allow overpayment for purchases too (provider owes us)
+           // throw new BadRequestException(`Payment amount ${amount} exceeds pending balance ${purchase.pendingBalance}`);
         }
 
         // 1. Update Purchase
         purchase.paidAmount = Number(purchase.paidAmount) + Number(amount);
         purchase.pendingBalance = Number(purchase.pendingBalance) - Number(amount);
-        if (purchase.pendingBalance <= 0) {
+        // If pendingBalance <= 0, we can still consider it completed or keep it active to show credit?
+        // Usually completed, but if we want to show credit in list, maybe keep it pending?
+        // For now let's mark as completed if 0, but if negative?
+        // Let's just update balance. Status logic can be: if pending <= 0 -> completed?
+        // But if negative, it means "Credit Balance".
+        if (purchase.pendingBalance === 0) {
           purchase.status = 'completed';
+        } else if (purchase.pendingBalance < 0) {
+            // Overpaid
+            purchase.status = 'completed'; // Or keep 'pending' to show in list? 
+            // In Debts page we show based on pendingBalance != 0 usually.
+            // If we mark completed, does it disappear?
+            // The frontend logic for Debts page uses OldDebt service for "old debts".
+            // But this is for NEW Purchases.
+            // Let's allow negative balance.
         }
         await queryRunner.manager.save(purchase);
 
