@@ -125,12 +125,14 @@ export class OldDebtsService {
         await queryRunner.manager.save(capital);
 
 
+        // Create Payment Record
         const payment = queryRunner.manager.create(Payment, {
             date: new Date(),
             amount: amount,
             method: 'cash',
             oldDebtId: debt.id,
-            createdById: userId
+            createdById: userId,
+            type: 'PAYMENT' // Explicitly set type to PAYMENT for clarity
         });
         await queryRunner.manager.save(payment);
 
