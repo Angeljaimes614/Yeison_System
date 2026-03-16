@@ -255,8 +255,10 @@ const Debts = () => {
         <tbody className="bg-white divide-y divide-gray-200">
           {transactions.map((tx) => {
              const total = Number(tx.totalPesos);
-             const pending = Number(tx.pendingBalance);
              const paid = Number(tx.paidAmount);
+             // Calculate pending dynamically to ensure negative values (surplus) are captured correctly
+             // regardless of backend logic.
+             const pending = total - paid;
              
              // Logic for status display
              let statusLabel = '';
