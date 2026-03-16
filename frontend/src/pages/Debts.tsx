@@ -247,7 +247,7 @@ const Debts = () => {
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Original</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Abonado</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saldo Pendiente</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saldo / Estado</th>
             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acción</th>
           </tr>
         </thead>
@@ -255,8 +255,35 @@ const Debts = () => {
           {transactions.map((tx) => {
              const total = Number(tx.totalPesos);
              const pending = Number(tx.pendingBalance);
-             const paid = total - pending; // or use tx.paidAmount
-             const progress = total > 0 ? (paid / total) * 100 : 0;
+             const paid = Number(tx.paidAmount);
+             
+             // Logic for status display
+             let statusLabel = '';
+             let statusColor = '';
+             let amountDisplay = '';
+
+             if (pending > 0) {
+                 statusLabel = 'Deuda Pendiente';
+                 statusColor = 'text-red-600';
+                 amountDisplay = `$ ${pending.toLocaleString('es-CO')}`;
+             } else if (pending === 0) {
+                 statusLabel = 'Deuda Pagada';
+                 statusColor = 'text-green-600';
+                 amountDisplay = '$ 0';
+             } else {
+                 // Pending is negative (Overpayment)
+                 const surplus = Math.abs(pending);
+                 if (type === 'receivable') {
+                     // Client paid too much -> We owe client
+                     statusLabel = 'Saldo a Favor del Cliente (Debemos)';
+                     statusColor = 'text-orange-600'; // Warning color
+                 } else {
+                     // We paid provider too much -> Provider owes us
+                     statusLabel = 'Saldo a Favor Nuestro (Nos deben)';
+                     statusColor = 'text-blue-600'; // Positive asset
+                 }
+                 amountDisplay = `$ ${surplus.toLocaleString('es-CO')}`;
+             }
 
              return (
               <tr key={tx.id}>
@@ -278,12 +305,17 @@ const Debts = () => {
                   $ {total.toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
-                  $ {Number(tx.paidAmount).toLocaleString('es-CO')}
+                  $ {paid.toLocaleString('es-CO')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`font-bold text-sm ${pending < 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                      {pending < 0 ? `+ $ ${Math.abs(pending).toLocaleString('es-CO')} (A Favor)` : `$ ${pending.toLocaleString('es-CO')}`}
-                  </span>
+                  <div className="flex flex-col">
+                      <span className={`font-bold text-sm ${statusColor}`}>
+                          {amountDisplay}
+                      </span>
+                      <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">
+                          {statusLabel}
+                      </span>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right flex justify-end gap-2">
                   <button

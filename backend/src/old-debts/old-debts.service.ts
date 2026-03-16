@@ -204,7 +204,8 @@ export class OldDebtsService {
     }
   }
 
-  async remove(id: string) {
+    // 3. REMOVE DEBT (Reverse Everything)
+    async remove(id: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -222,36 +223,32 @@ export class OldDebtsService {
 
         for (const payment of payments) {
             // Reverse logic based on payment type
-            if (payment.type === 'PAYMENT') {
-                // Normal Payment (Abono)
-                // If Client paid (Money IN) -> We return money (Money OUT)
-                // If We paid Provider (Money OUT) -> We get money back (Money IN)
+            if (payment.type === 'DEBT_INCREASE') {
+                // This was a LOAN given (Money OUT) or RECEIVED (Money IN)
+                if (debt.type === 'PROVIDER') {
+                    // We borrowed from Provider (Money IN) -> Reverse: Money OUT
+                     if (Number(capital.operativePlante) < Number(payment.amount)) {
+                         throw new BadRequestException('Fondos insuficientes para revertir el préstamo del proveedor');
+                     }
+                     capital.operativePlante = Number(capital.operativePlante) - Number(payment.amount);
+                } else {
+                    // We lent to Client (Money OUT) -> Reverse: Money IN
+                    capital.operativePlante = Number(capital.operativePlante) + Number(payment.amount);
+                }
+            } else {
+                // This was a PAYMENT/ABONO
+                // If Client paid us (Money IN) -> Reverse: Money OUT
+                // If We paid Provider (Money OUT) -> Reverse: Money IN
                 
                 if (debt.type === 'PROVIDER') {
-                    // We paid provider -> Money back IN
+                    // We paid provider (Money OUT) -> Reverse: Money IN
                     capital.operativePlante = Number(capital.operativePlante) + Number(payment.amount);
                 } else {
-                    // Client paid us -> Money back OUT
+                    // Client paid us (Money IN) -> Reverse: Money OUT
                      if (Number(capital.operativePlante) < Number(payment.amount)) {
                          throw new BadRequestException('Fondos insuficientes para devolver los abonos de esta deuda');
                      }
                      capital.operativePlante = Number(capital.operativePlante) - Number(payment.amount);
-                }
-
-            } else if (payment.type === 'DEBT_INCREASE') {
-                // Debt Increase (Loan)
-                // If Client Loan (Money OUT) -> Money back IN
-                // If Provider Loan (Money IN) -> Money back OUT
-
-                if (debt.type === 'PROVIDER') {
-                    // Provider lent us money (Money IN) -> We return it (Money OUT)
-                     if (Number(capital.operativePlante) < Number(payment.amount)) {
-                         throw new BadRequestException('Fondos insuficientes para devolver el préstamo del proveedor');
-                     }
-                     capital.operativePlante = Number(capital.operativePlante) - Number(payment.amount);
-                } else {
-                    // We lent client money (Money OUT) -> Money back IN
-                    capital.operativePlante = Number(capital.operativePlante) + Number(payment.amount);
                 }
             }
             
@@ -259,9 +256,11 @@ export class OldDebtsService {
             await queryRunner.manager.remove(payment);
         }
 
+        // Save Capital
+        await queryRunner.manager.save(capital);
+
         // Delete Debt
         await queryRunner.manager.remove(debt);
-        await queryRunner.manager.save(capital);
 
         await queryRunner.commitTransaction();
         return { message: 'Deuda eliminada correctamente' };
