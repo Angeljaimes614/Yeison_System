@@ -274,25 +274,13 @@ const Debts = () => {
              } else {
                  // Pending is negative (Overpayment)
                  const surplus = Math.abs(pending);
-                 // If it's negative, it means:
-                 // 1. Client paid too much -> Client has credit (We owe client) -> "Saldo a Favor (Debemos)"
-                 // 2. We paid provider too much -> We have credit (Provider owes us) -> "Saldo a Favor (Nos deben)"
-                 
-                 // BUT wait, "Saldo a Favor" usually means "Positive Asset for the entity viewing it".
-                 // Let's stick to user's request:
-                 // "Saldo a favor: $12.043.000"
-                 // If Client has credit, it's a LIABILITY for us.
-                 // If We have credit with Provider, it's an ASSET for us.
-                 
-                 // User requested: "Saldo a favor: $XX" when paid > debt.
-                 // Let's use neutral "Saldo a Favor" and clarify direction.
                  
                  if (type === 'receivable') {
-                     // Client Overpaid
+                     // Client paid more -> WE owe them
                      statusLabel = 'Saldo a Favor (Debemos)';
-                     statusColor = 'text-blue-600'; // Blue for credit balance
+                     statusColor = 'text-blue-600'; // Or Orange
                  } else {
-                     // We Overpaid Provider
+                     // We paid more -> They owe us
                      statusLabel = 'Saldo a Favor (Nos deben)';
                      statusColor = 'text-blue-600'; 
                  }
