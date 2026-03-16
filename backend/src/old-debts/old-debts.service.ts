@@ -88,8 +88,7 @@ export class OldDebtsService {
         if (!debt) throw new NotFoundException('Deuda no encontrada');
 
         if (Number(debt.pendingBalance) < Number(amount)) {
-            // Allow overpayment! Do not throw error.
-            // throw new BadRequestException(`El abono excede el saldo pendiente ($${debt.pendingBalance})`);
+            throw new BadRequestException(`El abono excede el saldo pendiente ($${debt.pendingBalance})`);
         }
 
         // Update Debt
