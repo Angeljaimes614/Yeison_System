@@ -390,7 +390,7 @@ const Debts = () => {
         <div>
             <h1 className="text-2xl font-bold text-gray-800 flex items-center">
             <Clock className="mr-2 text-blue-600" />
-            Cartera y Deudas (Divisas)
+            Cartera y Deudas (SISTEMA ACTUALIZADO ✅)
             </h1>
             <p className="text-gray-500 text-sm mt-1">Gestiona las cuentas por cobrar, por pagar y préstamos a terceros.</p>
         </div>

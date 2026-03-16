@@ -94,13 +94,14 @@ export class PaymentsService {
 
         // Check if amount exceeds pending balance
         if (amount > Number(sale.pendingBalance)) {
-          throw new BadRequestException(`Payment amount ${amount} exceeds pending balance ${sale.pendingBalance}`);
+          // Allow overpayment (client paid more -> we owe client)
+          // throw new BadRequestException(`Payment amount ${amount} exceeds pending balance ${sale.pendingBalance}`);
         }
 
         // 1. Update Sale
         sale.paidAmount = Number(sale.paidAmount) + Number(amount);
         sale.pendingBalance = Number(sale.pendingBalance) - Number(amount);
-        if (sale.pendingBalance <= 0) {
+        if (sale.pendingBalance === 0) {
           sale.status = 'completed';
         }
         await queryRunner.manager.save(sale);
