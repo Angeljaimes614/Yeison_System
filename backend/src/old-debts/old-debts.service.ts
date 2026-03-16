@@ -87,10 +87,7 @@ export class OldDebtsService {
         const debt = await queryRunner.manager.findOne(OldDebt, { where: { id: debtId } });
         if (!debt) throw new NotFoundException('Deuda no encontrada');
 
-        if (Number(debt.pendingBalance) < Number(amount)) {
-            // Allow overpayment! Do not throw error.
-            // throw new BadRequestException(`El abono excede el saldo pendiente ($${debt.pendingBalance})`);
-        }
+
 
         // Update Debt
         debt.paidAmount = Number(debt.paidAmount) + Number(amount);
