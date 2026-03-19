@@ -82,11 +82,17 @@ export const paymentsService = {
 };
 
 export const oldDebtsService = {
+  findAll: () => api.get('/old-debts'),
   create: (data: any) => api.post('/old-debts', data),
   registerPayment: (data: any) => api.post('/old-debts/payment', data),
   increase: (data: any) => api.post('/old-debts/increase', data),
   remove: (id: string) => api.delete(`/old-debts/${id}`),
-  findAll: () => api.get('/old-debts'),
+};
+
+export const depositsService = {
+  findAll: () => api.get('/deposits'),
+  create: (data: any) => api.post('/deposits', data),
+  reverse: (id: string) => api.put(`/deposits/${id}/reverse`),
 };
 
 export const investmentsService = {

@@ -11,6 +11,7 @@ import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Investments from './pages/Investments';
 import Debts from './pages/Debts';
+import Deposits from './pages/Deposits';
 import Clients from './pages/Clients';
 import Providers from './pages/Providers';
 import Settings from './pages/Settings';
@@ -86,6 +87,12 @@ function App() {
             <Route path="debts" element={
                <RoleRoute roles={['admin', 'supervisor', 'cajero']}>
                  <Debts />
+               </RoleRoute>
+            } />
+            
+            <Route path="deposits" element={
+               <RoleRoute roles={['admin']}>
+                 <Deposits />
                </RoleRoute>
             } />
             

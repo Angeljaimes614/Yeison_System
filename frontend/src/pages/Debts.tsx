@@ -410,8 +410,18 @@ const Debts = () => {
             <span className="block text-xs font-bold uppercase tracking-wide">Por Cobrar (Clientes)</span>
             <span className="text-2xl font-bold">
               $ {receivables
-                  .filter(tx => Number(tx.pendingBalance) > 0)
-                  .reduce((sum, tx) => sum + Number(tx.pendingBalance), 0)
+                  // Remove filter > 0 to show ALL balance including surplus as negative
+                  // Actually, for "Total to Collect", we usually sum only POSITIVE debts.
+                  // If we include negative (surplus), the total will decrease.
+                  // E.g. Client A owes 100, Client B has credit -20. Net is 80.
+                  // Is that what we want? "Net Portfolio"? Yes, that's more accurate for cash flow.
+                  // Let's remove the filter.
+                  .reduce((sum, tx) => {
+                      const total = Number(tx.totalPesos);
+                      const paid = Number(tx.paidAmount);
+                      const pending = total - paid;
+                      return sum + pending;
+                  }, 0)
                   .toLocaleString('es-CO')}
             </span>
           </div>
@@ -430,8 +440,12 @@ const Debts = () => {
             <span className="block text-xs font-bold uppercase tracking-wide">Por Pagar (Proveedores)</span>
             <span className="text-2xl font-bold">
               $ {payables
-                  .filter(tx => Number(tx.pendingBalance) > 0)
-                  .reduce((sum, tx) => sum + Number(tx.pendingBalance), 0)
+                  .reduce((sum, tx) => {
+                      const total = Number(tx.totalPesos);
+                      const paid = Number(tx.paidAmount);
+                      const pending = total - paid;
+                      return sum + pending;
+                  }, 0)
                   .toLocaleString('es-CO')}
             </span>
           </div>

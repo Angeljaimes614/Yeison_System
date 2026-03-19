@@ -79,6 +79,7 @@ import { OldDebtsModule } from './old-debts/old-debts.module';
     ExchangesModule,
     InvestmentsModule,
     OldDebtsModule,
+    DepositsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
