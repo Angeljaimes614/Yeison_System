@@ -21,6 +21,7 @@ import { AuthModule } from './auth/auth.module';
 import { ExchangesModule } from './exchanges/exchanges.module';
 import { InvestmentsModule } from './investments/investments.module';
 import { OldDebtsModule } from './old-debts/old-debts.module';
+import { DepositsModule } from './deposits/deposits.module';
 
 @Module({
   imports: [
