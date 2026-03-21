@@ -97,4 +97,37 @@ export class DepositsService {
       await queryRunner.release();
     }
   }
+
+  async removeAll() {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+        const deposits = await queryRunner.manager.find(Deposit);
+        const capitals = await queryRunner.manager.find(Capital);
+        const capital = capitals.length > 0 ? capitals[0] : null;
+
+        if (capital) {
+            for (const deposit of deposits) {
+                if (!deposit.isReversed) {
+                     // Reverse the active ones from capital before deleting
+                     capital.operativePlante = Number(capital.operativePlante) - Number(deposit.total);
+                     capital.accumulatedProfit = Number(capital.accumulatedProfit) - Number(deposit.total);
+                }
+            }
+            await queryRunner.manager.save(Capital, capital);
+        }
+
+        await queryRunner.manager.clear(Deposit); // deletes all rows
+
+        await queryRunner.commitTransaction();
+        return { message: 'Todos los depósitos fueron eliminados y la caja ajustada' };
+    } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+    } finally {
+        await queryRunner.release();
+    }
+  }
 }

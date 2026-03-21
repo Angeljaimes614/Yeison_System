@@ -19,4 +19,9 @@ export class DepositsController {
   reverse(@Param('id') id: string) {
     return this.depositsService.reverse(id);
   }
+
+  @Delete('all')
+  removeAll() {
+    return this.depositsService.removeAll();
+  }
 }

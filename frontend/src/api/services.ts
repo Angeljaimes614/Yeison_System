@@ -93,6 +93,7 @@ export const depositsService = {
   findAll: () => api.get('/deposits'),
   create: (data: any) => api.post('/deposits', data),
   reverse: (id: string) => api.put(`/deposits/${id}/reverse`),
+  removeAll: () => api.delete('/deposits/all'),
 };
 
 export const investmentsService = {
