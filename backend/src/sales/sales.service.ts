@@ -179,7 +179,7 @@ export class SalesService {
         costBasis: costOfSale,
         operationType: isDirect ? 'DIRECT' : 'INVENTORY',
         pendingBalance: totalPesos - paidAmount,
-        status: paidAmount >= totalPesos ? 'completed' : 'pending',
+        status: 'pending', // ALWAYS pending to prevent it from disappearing
       });
       const savedSale = await queryRunner.manager.save(sale);
 

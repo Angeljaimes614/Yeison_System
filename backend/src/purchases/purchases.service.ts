@@ -122,7 +122,7 @@ export class PurchasesService {
         ...createPurchaseDto,
         totalPesos,
         pendingBalance: totalPesos - paidAmount,
-        status: paidAmount >= totalPesos ? 'completed' : 'pending',
+        status: 'pending', // ALWAYS pending so it stays visible
       });
       const savedPurchase = await queryRunner.manager.save(purchase);
 
